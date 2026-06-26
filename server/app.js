@@ -30,7 +30,18 @@ app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     contentSecurityPolicy: env.isProduction
-      ? undefined
+      ? {
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'"],
+            mediaSrc: ["'self'"],
+            objectSrc: ["'none'"],
+          },
+        }
       : false,
   })
 );
@@ -57,10 +68,16 @@ app.use('/api', adminRoutes);
 
 const distPath = path.join(ROOT_DIR, 'dist');
 if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
+  app.use(express.static(distPath, { index: false }));
 
   app.get(/^(?!\/api|\/uploads).*/, (req, res, next) => {
     if (req.method !== 'GET') return next();
+    
+    const filePath = path.join(distPath, req.path);
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+      return res.sendFile(filePath);
+    }
+    
     res.sendFile(path.join(distPath, 'index.html'), (err) => {
       if (err) next(err);
     });

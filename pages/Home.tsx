@@ -283,9 +283,9 @@ export const Home: React.FC = () => {
                         {ach.image ? <img src={ach.image} className="w-10 h-10 object-contain filter invert" /> : <i className="fas fa-trophy text-3xl text-yellow-400"></i>}
                       </div>
                       <h3 className="text-4xl md:text-5xl font-bold mb-2 text-white">
-                        <NumberCounter target={ach.title.split(' ')[0]} />
+                        <NumberCounter target={ach.title ? ach.title.split(' ')[0] : '0'} />
                       </h3>
-                      <p className="text-blue-200 uppercase tracking-wider text-xs font-bold">{ach.title.split(' ').slice(1).join(' ')}</p>
+                      <p className="text-blue-200 uppercase tracking-wider text-xs font-bold">{ach.title ? ach.title.split(' ').slice(1).join(' ') : ''}</p>
                   </div>
                 ))}
               </div>

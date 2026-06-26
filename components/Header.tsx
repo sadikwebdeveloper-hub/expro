@@ -120,14 +120,7 @@ export const Header: React.FC = () => {
                 {link.name}
               </Link>
             ))}
-            
-            {/* Desktop Social Links */}
-             <div className="hidden xl:flex items-center gap-3 border-l pl-4 border-gray-300">
-                {config?.facebookUrl && <a href={config.facebookUrl} className="text-gray-500 hover:text-blue-600" target="_blank" rel="noopener noreferrer"><i className="fab fa-facebook-f"></i></a>}
-                {config?.linkedinUrl && <a href={config.linkedinUrl} className="text-gray-500 hover:text-blue-600" target="_blank" rel="noopener noreferrer"><i className="fab fa-linkedin-in"></i></a>}
-                {config?.youtubeUrl && <a href={config.youtubeUrl} className="text-gray-500 hover:text-red-500" target="_blank" rel="noopener noreferrer"><i className="fab fa-youtube"></i></a>}
-             </div>
-
+                       
             <Link 
               to="/contact" 
               className="bg-blue-600 text-white px-6 py-2 rounded-full font-medium hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-500/40"

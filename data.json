@@ -11,7 +11,25 @@
     "mapUrl": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3650.5983460988937!2d90.4190289759715!3d23.797313086973347!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3755c7a0f443577d%3A0x6e65e656d0d21658!2sGulshan%2C%20Dhaka!5e0!3m2!1sen!2sbd!4v1714567890123!5m2!1sen!2sbd",
     "notificationEmails": [
       "admin@exprogroup.com"
-    ]
+    ],
+    "faviconUrl": "",
+    "supportEmail": "info@exprogroup.com",
+    "instagramUrl": "",
+    "twitterUrl": "",
+    "whatsappUrl": "",
+    "telegramUrl": "",
+    "messengerUrl": "",
+    "metaTitle": "Expro Group - Legacy of Excellence",
+    "metaDescription": "Leading conglomerate committed to sustainable development and quality.",
+    "keywords": "expro, group, bangladesh, industry",
+    "googleAnalyticsId": "",
+    "facebookPixelId": "",
+    "websiteName": "Expro Group",
+    "timezone": "Asia/Dhaka",
+    "currency": "BDT",
+    "language": "en",
+    "maintenanceMode": false,
+    "maintenanceMessage": "We are currently performing scheduled maintenance. Please check back soon."
   },
   "slides": [
     {
@@ -203,12 +221,62 @@
   ],
   "users": [
     {
+      "id": 1782486330214,
+      "username": "testadmin99",
+      "fullName": "Test Admin",
+      "email": "test@test.com",
+      "role": "manager",
+      "password": "$2b$10$fuHeOfKSecwnC.OEvERz..akJJjlBGt2YNY1cdbxGbvIQ7kSBbxAq",
+      "status": "active",
+      "permissions": {
+        "dashboard": true,
+        "products": true,
+        "users": false,
+        "messages": true,
+        "orders": true,
+        "reports": true,
+        "settings": false,
+        "visitorTracking": true,
+        "pages": true,
+        "subsidiaries": true,
+        "admins": false,
+        "auditLogs": false
+      },
+      "forcePasswordChange": true,
+      "failedLoginAttempts": 0,
+      "loginHistory": [],
+      "createdAt": "2026-06-26T15:05:30.214Z",
+      "createdBy": "sadik"
+    },
+    {
       "id": 1776231235833,
       "username": "sadik",
-      "password": "1234",
+      "password": "$2b$10$RpC0z/V4KzUlyh./XSBiru1g35uHpiREDlNjxVyNREnaYnL68mU6y",
       "fullName": "Md Sadik Ahmmed",
       "email": "sadikbusiness29@gmail.com",
-      "role": "super_admin"
+      "role": "super_admin",
+      "loginHistory": [
+        {
+          "timestamp": "2026-06-26T15:06:37.390Z",
+          "ip": "127.0.0.1",
+          "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+          "success": true
+        },
+        {
+          "timestamp": "2026-06-26T15:05:30.088Z",
+          "ip": "127.0.0.1",
+          "browser": "Mozilla/5.0 (Windows NT; Windows NT 10.0; en-GB) WindowsPowerShell/5.1.26100.8655",
+          "success": true
+        },
+        {
+          "timestamp": "2026-06-26T15:05:12.469Z",
+          "ip": "127.0.0.1",
+          "browser": "Mozilla/5.0 (Windows NT; Windows NT 10.0; en-GB) WindowsPowerShell/5.1.26100.8655",
+          "success": true
+        }
+      ],
+      "failedLoginAttempts": 0,
+      "lastLogin": "2026-06-26T15:06:37.390Z"
     },
     {
       "id": 1770123791677,
@@ -231,6 +299,18 @@
     }
   ],
   "visitors": [
+    {
+      "id": 1782484232340,
+      "ip": "::1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "date": "26/06/2026, 20:30:32"
+    },
+    {
+      "id": 1782484219782,
+      "ip": "::1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "date": "26/06/2026, 20:30:19"
+    },
     {
       "id": 1776651001301,
       "ip": "::1",
@@ -549,5 +629,420 @@
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
       "date": "2/3/2026, 7:01:27 PM"
     }
-  ]
+  ],
+  "otps": [
+    {
+      "id": 1782485517428,
+      "email": "sadikbusiness29@gmail.com",
+      "codeHash": "$2b$10$ohTZXWNvFKkkmgPnngKk1ez6OofxPobKEsBruf1EE0zWBB1ne9Xfi",
+      "purpose": "reset",
+      "expiresAt": 1782485817428,
+      "used": false,
+      "createdAt": 1782485517428
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": 1782488923958,
+      "adminId": 1776231235833,
+      "adminUsername": "sadik",
+      "adminName": "sadik",
+      "action": "Logout",
+      "details": {
+        "adminName": "sadik"
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "timestamp": "2026-06-26T15:48:43.959Z"
+    },
+    {
+      "id": 1782488898927,
+      "adminId": 1776231235833,
+      "adminUsername": "sadik",
+      "adminName": "sadik",
+      "action": "Global Settings Updated",
+      "details": {
+        "sections": [
+          "general",
+          "contact",
+          "branding",
+          "social",
+          "seo",
+          "footer",
+          "smtp"
+        ]
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "timestamp": "2026-06-26T15:48:18.927Z"
+    },
+    {
+      "id": 1782488895511,
+      "adminId": 1776231235833,
+      "adminUsername": "sadik",
+      "adminName": "sadik",
+      "action": "SMTP Test",
+      "details": {
+        "success": true,
+        "recipient": "sadikwebdeveloper@gmail.com"
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "timestamp": "2026-06-26T15:48:15.511Z"
+    },
+    {
+      "id": 1782488889630,
+      "adminId": 1776231235833,
+      "adminUsername": "sadik",
+      "adminName": "sadik",
+      "action": "Global Settings Updated",
+      "details": {
+        "sections": [
+          "smtp"
+        ]
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "timestamp": "2026-06-26T15:48:09.630Z"
+    },
+    {
+      "id": 1782488736122,
+      "adminId": 1776231235833,
+      "adminUsername": "sadik",
+      "adminName": "sadik",
+      "action": "SMTP Test",
+      "details": {
+        "success": false,
+        "recipient": "sadikwebdeveloper@gmail.com"
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "timestamp": "2026-06-26T15:45:36.122Z"
+    },
+    {
+      "id": 1782487038247,
+      "adminId": 1776231235833,
+      "adminUsername": "sadik",
+      "adminName": "sadik",
+      "action": "SMTP Test",
+      "details": {
+        "success": false,
+        "recipient": "sadikwebdeveloper@gmail.com"
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "timestamp": "2026-06-26T15:17:18.247Z"
+    },
+    {
+      "id": 1782487017500,
+      "adminId": 1776231235833,
+      "adminUsername": "sadik",
+      "adminName": "sadik",
+      "action": "Global Settings Updated",
+      "details": {
+        "sections": [
+          "general",
+          "contact",
+          "branding",
+          "social",
+          "seo",
+          "footer",
+          "smtp"
+        ]
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "timestamp": "2026-06-26T15:16:57.500Z"
+    },
+    {
+      "id": 1782487013543,
+      "adminId": 1776231235833,
+      "adminUsername": "sadik",
+      "adminName": "sadik",
+      "action": "SMTP Test",
+      "details": {
+        "success": false,
+        "recipient": "sadikwebdeveloper@gmail.com"
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "timestamp": "2026-06-26T15:16:53.543Z"
+    },
+    {
+      "id": 1782487009364,
+      "adminId": 1776231235833,
+      "adminUsername": "sadik",
+      "adminName": "sadik",
+      "action": "Global Settings Updated",
+      "details": {
+        "sections": [
+          "smtp"
+        ]
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "timestamp": "2026-06-26T15:16:49.364Z"
+    },
+    {
+      "id": 1782486990044,
+      "adminId": 1776231235833,
+      "adminUsername": "sadik",
+      "adminName": "sadik",
+      "action": "SMTP Test",
+      "details": {
+        "success": false,
+        "recipient": "sadikwebdeveloper@gmail.com"
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "timestamp": "2026-06-26T15:16:30.044Z"
+    },
+    {
+      "id": 1782486983856,
+      "adminId": 1776231235833,
+      "adminUsername": "sadik",
+      "adminName": "sadik",
+      "action": "Global Settings Updated",
+      "details": {
+        "sections": [
+          "smtp"
+        ]
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "timestamp": "2026-06-26T15:16:23.856Z"
+    },
+    {
+      "id": 1782486966423,
+      "adminId": 1776231235833,
+      "adminUsername": "sadik",
+      "adminName": "sadik",
+      "action": "SMTP Test",
+      "details": {
+        "success": false,
+        "recipient": "sadikwebdeveloper@gmail.com"
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "timestamp": "2026-06-26T15:16:06.423Z"
+    },
+    {
+      "id": 1782486905013,
+      "adminId": 1776231235833,
+      "adminUsername": "sadik",
+      "adminName": "sadik",
+      "action": "SMTP Test",
+      "details": {
+        "success": false,
+        "recipient": "mdmoshiurrahmanmohi1@gmail.com"
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "timestamp": "2026-06-26T15:15:05.013Z"
+    },
+    {
+      "id": 1782486787228,
+      "adminId": 1776231235833,
+      "adminUsername": "sadik",
+      "adminName": "sadik",
+      "action": "SMTP Test",
+      "details": {
+        "success": false,
+        "recipient": "mdmoshiurrahmanmohi1@gmail.com"
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "timestamp": "2026-06-26T15:13:07.228Z"
+    },
+    {
+      "id": 1782486783723,
+      "adminId": 1776231235833,
+      "adminUsername": "sadik",
+      "adminName": "sadik",
+      "action": "Global Settings Updated",
+      "details": {
+        "sections": [
+          "smtp"
+        ]
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "timestamp": "2026-06-26T15:13:03.723Z"
+    },
+    {
+      "id": 1782486643321,
+      "adminId": 1776231235833,
+      "adminUsername": "sadik",
+      "adminName": "sadik",
+      "action": "SMTP Test",
+      "details": {
+        "success": false,
+        "recipient": "mdmoshiurrahmanmohi1@gmail.com"
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "timestamp": "2026-06-26T15:10:43.321Z"
+    },
+    {
+      "id": 1782486639939,
+      "adminId": 1776231235833,
+      "adminUsername": "sadik",
+      "adminName": "sadik",
+      "action": "Global Settings Updated",
+      "details": {
+        "sections": [
+          "smtp"
+        ]
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "timestamp": "2026-06-26T15:10:39.939Z"
+    },
+    {
+      "id": 1782486554280,
+      "adminId": 1776231235833,
+      "adminUsername": "sadik",
+      "adminName": "sadik",
+      "action": "SMTP Test",
+      "details": {
+        "success": false,
+        "recipient": "mdmoshiurrahmanmohi1@gmail.com"
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "timestamp": "2026-06-26T15:09:14.280Z"
+    },
+    {
+      "id": 1782486526873,
+      "adminId": 1776231235833,
+      "adminUsername": "sadik",
+      "adminName": "sadik",
+      "action": "Global Settings Updated",
+      "details": {
+        "sections": [
+          "smtp"
+        ]
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "timestamp": "2026-06-26T15:08:46.873Z"
+    },
+    {
+      "id": 1782486397391,
+      "adminId": null,
+      "adminUsername": "system",
+      "adminName": "Md Sadik Ahmmed",
+      "action": "Login",
+      "details": {
+        "adminName": "Md Sadik Ahmmed",
+        "rememberMe": false
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "timestamp": "2026-06-26T15:06:37.391Z"
+    },
+    {
+      "id": 1782486330218,
+      "adminId": 1776231235833,
+      "adminUsername": "sadik",
+      "adminName": "Test Admin",
+      "action": "Admin Created",
+      "details": {
+        "adminName": "Test Admin",
+        "targetId": 1782486330214,
+        "targetUsername": "testadmin99",
+        "role": "manager"
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT; Windows NT 10.0; en-GB) WindowsPowerShell/5.1.26100.8655",
+      "timestamp": "2026-06-26T15:05:30.218Z"
+    },
+    {
+      "id": 1782486330089,
+      "adminId": null,
+      "adminUsername": "system",
+      "adminName": "Md Sadik Ahmmed",
+      "action": "Login",
+      "details": {
+        "adminName": "Md Sadik Ahmmed",
+        "rememberMe": false
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT; Windows NT 10.0; en-GB) WindowsPowerShell/5.1.26100.8655",
+      "timestamp": "2026-06-26T15:05:30.089Z"
+    },
+    {
+      "id": 1782486312471,
+      "adminId": null,
+      "adminUsername": "system",
+      "adminName": "Md Sadik Ahmmed",
+      "action": "Login",
+      "details": {
+        "adminName": "Md Sadik Ahmmed",
+        "rememberMe": false
+      },
+      "ip": "127.0.0.1",
+      "browser": "Mozilla/5.0 (Windows NT; Windows NT 10.0; en-GB) WindowsPowerShell/5.1.26100.8655",
+      "timestamp": "2026-06-26T15:05:12.471Z"
+    }
+  ],
+  "settings": {
+    "general": {
+      "websiteName": "Expro Group",
+      "timezone": "Asia/Dhaka",
+      "currency": "BDT",
+      "language": "en",
+      "maintenanceMode": false,
+      "maintenanceMessage": "We are currently performing scheduled maintenance. Please check back soon."
+    },
+    "contact": {
+      "phone": "+880 1712 345678",
+      "email": "info@exprogroup.com",
+      "supportEmail": "info@exprogroup.com",
+      "address": "Expro Tower, Gulshan-2, Dhaka-1212, Bangladesh",
+      "mapUrl": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3650.5983460988937!2d90.4190289759715!3d23.797313086973347!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3755c7a0f443577d%3A0x6e65e656d0d21658!2sGulshan%2C%20Dhaka!5e0!3m2!1sen!2sbd!4v1714567890123!5m2!1sen!2sbd",
+      "notificationEmails": [
+        "admin@exprogroup.com"
+      ]
+    },
+    "branding": {
+      "logoUrl": "https://nexalite-org.github.io/storage/logo.png",
+      "faviconUrl": ""
+    },
+    "social": {
+      "facebook": "#",
+      "instagram": "",
+      "linkedin": "#",
+      "twitter": "",
+      "youtube": "#",
+      "whatsapp": "",
+      "telegram": "",
+      "messenger": ""
+    },
+    "seo": {
+      "metaTitle": "Expro Group - Legacy of Excellence",
+      "metaDescription": "Leading conglomerate committed to sustainable development and quality.",
+      "keywords": "expro, group, bangladesh, industry",
+      "googleAnalyticsId": "",
+      "facebookPixelId": ""
+    },
+    "footer": {
+      "copyright": "We are a conglomerate committed to sustainable development, transparency, and quality. Our diverse portfolio drives national progress."
+    },
+    "smtp": {
+      "host": "smtp.gmail.com",
+      "port": 465,
+      "username": "ewf.exprogroup.bd@gmail.com",
+      "passwordEncrypted": "8a850f2fee6e46ddd90a06dd91e86fb3:4630b1147288ffe351abd8655282df89:d77a6707f552d411c619c78c6a7a5dbd9c0516",
+      "encryption": "SSL",
+      "fromEmail": "ewf.exprogroup.bd@gmail.com",
+      "fromName": "Expro Group",
+      "replyTo": "sadikwebdeveloper@gmail.com",
+      "enabled": true,
+      "enableContactForm": true,
+      "enableOtp": true,
+      "enableForgotPassword": true,
+      "enableWelcome": true
+    }
+  }
 }

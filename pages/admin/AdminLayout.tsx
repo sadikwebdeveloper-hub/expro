@@ -24,7 +24,7 @@ export const AdminLayout: React.FC = () => {
   }, [location]);
 
   const handleLogout = () => {
-    backend.logout();
+    backend.logoutApi();
     navigate('/admin/login');
   };
 

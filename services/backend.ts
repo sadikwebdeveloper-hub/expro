@@ -1,18 +1,17 @@
-import { Product, Achievement, NewsItem, Message, User, MediaItem, SiteConfig, HeroSlide, AboutContent, Company, Visitor, Partner, ServiceCard, Director } from '../types';
+import { Product, Achievement, NewsItem, Message, User, MediaItem, SiteConfig, HeroSlide, AboutContent, Company, Visitor, Partner, ServiceCard, Director, AppSettings, AuditLogEntry, AdminPermissions } from '../types';
 
-// Helper to safely determine API URL without crashing
 const getBaseUrl = () => {
-    if (typeof window !== 'undefined') {
-        if (window.location.port === '5173') {
-            return 'http://localhost:5000/api';
-        }
+  if (typeof window !== 'undefined') {
+    const { port } = window.location;
+    if (port === '3000' || port === '5173') {
+      return 'http://localhost:5000/api';
     }
-    return '/api';
-}
+  }
+  return '/api';
+};
 
 const API_URL = getBaseUrl();
 
-// --- RICH MOCK DATA FOR FALLBACK ---
 const MOCK_DATA = {
   config: {
     logoUrl: "https://nexalite-org.github.io/storage/logo.png",
@@ -105,21 +104,48 @@ const MOCK_DATA = {
       { "id": 2, "name": "Md. Hashan Sofiul Karir", "position": "Managing Director", "image": "" },
       { "id": 3, "name": "Md. Abdul Mottalib", "position": "Coordinator", "image": "" }
   ],
-  users: [], // Intentionally empty to force secure setup on first run
+  users: [],
   media: [],
   messages: [],
   visitors: []
 };
 
 class RealBackend {
+  private getAuthHeaders(): Record<string, string> {
+    const token = localStorage.getItem('authToken');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
+  private unwrapResponse(json: any) {
+    if (json && typeof json.success === 'boolean') {
+      if (!json.success) {
+        throw new Error(json.message || 'Request failed');
+      }
+      return json.data;
+    }
+    return json;
+  }
+
   private async request(url: string, options: RequestInit = {}) {
     try {
-      const res = await fetch(url, options);
-      if (!res.ok) throw new Error(`API Error: ${res.statusText}`);
-      const contentType = res.headers.get("content-type");
-      if (contentType && contentType.indexOf("application/json") !== -1) {
-        return await res.json();
+      const headers = {
+        ...this.getAuthHeaders(),
+        ...(options.headers as Record<string, string> || {}),
+      };
+
+      const res = await fetch(url, { ...options, headers });
+      const contentType = res.headers.get('content-type');
+
+      if (contentType && contentType.indexOf('application/json') !== -1) {
+        const json = await res.json();
+        if (!res.ok) {
+          const message = json.message || res.statusText;
+          throw new Error(message);
+        }
+        return this.unwrapResponse(json);
       }
+
+      if (!res.ok) throw new Error(`API Error: ${res.statusText}`);
       return { success: true };
     } catch (e) {
       console.warn(`Backend request failed for ${url}:`, e);
@@ -127,256 +153,454 @@ class RealBackend {
     }
   }
 
-  private async postJson(url: string, body: any) {
+  private async postJson(url: string, body: any, auth = true) {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (auth) Object.assign(headers, this.getAuthHeaders());
     return this.request(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      headers,
+      body: JSON.stringify(body),
     });
   }
 
   private async putJson(url: string, body: any) {
     return this.request(url, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
+      body: JSON.stringify(body),
     });
   }
 
-  // --- Auth & Setup ---
+  private async uploadForm(url: string, formData: FormData, method: 'POST' | 'PUT' = 'POST') {
+    return this.request(url, {
+      method,
+      headers: this.getAuthHeaders(),
+      body: formData,
+    });
+  }
+
   async checkSetup(): Promise<boolean> {
     try {
-      const data = await this.request(`${API_URL}/check-setup`);
-      return data.needsSetup;
-    } catch { 
-      // If API fails, check mock data length
-      return MOCK_DATA.users.length === 0; 
-    } 
+      const data = await this.request(`${API_URL}/check-setup`, { headers: {} });
+      return data?.needsSetup ?? false;
+    } catch {
+      return MOCK_DATA.users.length === 0;
+    }
   }
 
   async setupAdmin(data: any): Promise<boolean> {
     try {
-      await this.postJson(`${API_URL}/setup`, data);
+      await this.postJson(`${API_URL}/setup`, data, false);
       return true;
-    } catch { 
-      // Fallback for purely client-side demo (simulates creating first user)
+    } catch {
       if (MOCK_DATA.users.length === 0) {
         MOCK_DATA.users.push({ id: 1, ...data, role: 'super_admin' });
         return true;
       }
-      return false; 
+      return false;
     }
   }
 
-  async login(username: string, password: string): Promise<User | null> {
+  async login(username: string, password: string, rememberMe = false): Promise<{ user: User | null; forcePasswordChange?: boolean }> {
     try {
-      const user = await this.postJson(`${API_URL}/login`, { username, password });
+      const result = await this.postJson(`${API_URL}/login`, { username, password, rememberMe }, false);
+      const user = result?.user;
+      const token = result?.token;
+
       if (user) {
+        if (token) localStorage.setItem('authToken', token);
         localStorage.setItem('currentUser', JSON.stringify(user));
-        return user;
+        if (rememberMe) localStorage.setItem('rememberMe', 'true');
+        return { user, forcePasswordChange: result?.forcePasswordChange };
       }
-    } catch { 
-        // Secure Fallback: Check against MOCK_DATA users only (no hardcoded 'admin')
-        const u = MOCK_DATA.users.find(u => u.username === username && u.password === password);
-        if(u) {
-            localStorage.setItem('currentUser', JSON.stringify(u));
-            return u as User;
-        }
+    } catch {
+      const u = MOCK_DATA.users.find(u => u.username === username && u.password === password);
+      if (u) {
+        localStorage.setItem('currentUser', JSON.stringify(u));
+        return { user: u as User };
+      }
     }
-    return null;
+    return { user: null };
   }
 
-  async forgotPassword(email: string): Promise<boolean> {
-      try { await this.postJson(`${API_URL}/forgot-password`, { email }); return true; } catch { return true; }
+  async logoutApi(): Promise<void> {
+    try {
+      await this.postJson(`${API_URL}/logout`, {});
+    } catch {
+      // ignore
+    }
+    this.logout();
   }
 
-  logout() { localStorage.removeItem('currentUser'); }
-  getCurrentUser(): User | null { const u = localStorage.getItem('currentUser'); return u ? JSON.parse(u) : null; }
+  async forgotPassword(email: string): Promise<{ otpSent: boolean }> {
+    try {
+      const result = await this.postJson(`${API_URL}/forgot-password`, { email }, false);
+      return result || { otpSent: false };
+    } catch {
+      return { otpSent: false };
+    }
+  }
+
+  async verifyResetOtp(email: string, otp: string): Promise<boolean> {
+    try {
+      await this.postJson(`${API_URL}/verify-otp`, { email, otp, purpose: 'reset' }, false);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async resendOtp(email: string, purpose: 'reset' | 'verification' = 'reset'): Promise<{ otpSent: boolean }> {
+    try {
+      const result = await this.postJson(`${API_URL}/resend-otp`, { email, purpose }, false);
+      return result || { otpSent: false };
+    } catch {
+      return { otpSent: false };
+    }
+  }
+
+  async resetPassword(email: string, otp: string, newPassword: string): Promise<boolean> {
+    try {
+      await this.postJson(`${API_URL}/reset-password`, { email, otp, newPassword }, false);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  logout() {
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('rememberMe');
+  }
+
+  getCurrentUser(): User | null {
+    const u = localStorage.getItem('currentUser');
+    return u ? JSON.parse(u) : null;
+  }
 
   async updateProfile(userId: number, data: any): Promise<User | null> {
     const current = this.getCurrentUser();
-    if(current) {
-        try { await this.postJson(`${API_URL}/profile`, { userId, ...data }); } catch {}
+    if (current) {
+      try {
+        const result = await this.postJson(`${API_URL}/profile`, { userId, ...data });
+        const user = result?.user || { ...current, ...data };
+        if (user.password) delete user.password;
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        return user;
+      } catch {
         const updated = { ...current, ...data };
-        if(updated.password) delete updated.password;
+        if (updated.password) delete updated.password;
         localStorage.setItem('currentUser', JSON.stringify(updated));
-        
-        // Update mock data if offline
         const mockIdx = MOCK_DATA.users.findIndex(u => u.id === userId);
-        if(mockIdx > -1) {
-             MOCK_DATA.users[mockIdx] = { ...MOCK_DATA.users[mockIdx], ...data };
+        if (mockIdx > -1) {
+          MOCK_DATA.users[mockIdx] = { ...MOCK_DATA.users[mockIdx], ...data };
         }
-        
         return updated;
+      }
     }
     return null;
   }
 
-  // --- User Management ---
   async getUsers(): Promise<User[]> {
-      try { return await this.request(`${API_URL}/users`); } 
-      catch { return MOCK_DATA.users as User[]; }
-  }
-  async addUser(user: any): Promise<boolean> {
-      try { await this.postJson(`${API_URL}/users`, user); return true; } 
-      catch { 
-         // Mock fallback
-         if(MOCK_DATA.users.find(u => u.username === user.username)) return false;
-         MOCK_DATA.users.push({ id: Date.now(), ...user });
-         return true;
-      }
-  }
-  async deleteUser(id: number): Promise<void> {
-      try { await this.request(`${API_URL}/users/${id}`, { method: 'DELETE' }); } 
-      catch {
-         MOCK_DATA.users = MOCK_DATA.users.filter(u => u.id !== id);
-      }
+    try { return await this.getAdmins(); }
+    catch { return MOCK_DATA.users as User[]; }
   }
 
-  // --- Data Access with Mock Fallback ---
-  // Using explicit fallbacks checks: if API returns empty array/object, use mock data to ensure UI is populated.
+  async getAdmins(): Promise<User[]> {
+    try { return await this.request(`${API_URL}/admins`); }
+    catch { return MOCK_DATA.users as User[]; }
+  }
+
+  async createAdmin(data: {
+    username: string;
+    fullName: string;
+    email: string;
+    role: string;
+    permissions?: AdminPermissions;
+    password?: string;
+    sendInvitation?: boolean;
+  }): Promise<User> {
+    return await this.postJson(`${API_URL}/admins`, data);
+  }
+
+  async updateAdmin(id: number, data: Partial<User> & { password?: string; permissions?: AdminPermissions }): Promise<User> {
+    return await this.putJson(`${API_URL}/admins/${id}`, data);
+  }
+
+  async deleteAdmin(id: number): Promise<void> {
+    await this.request(`${API_URL}/admins/${id}`, { method: 'DELETE' });
+  }
+
+  async suspendAdmin(id: number): Promise<User> {
+    return await this.postJson(`${API_URL}/admins/${id}/suspend`, {});
+  }
+
+  async activateAdmin(id: number): Promise<User> {
+    return await this.postJson(`${API_URL}/admins/${id}/activate`, {});
+  }
+
+  async resetAdminPassword(id: number): Promise<void> {
+    await this.postJson(`${API_URL}/admins/${id}/reset-password`, {});
+  }
+
+  async getAuditLogs(limit = 100): Promise<AuditLogEntry[]> {
+    try { return await this.request(`${API_URL}/audit-logs?limit=${limit}`); }
+    catch { return []; }
+  }
+
+  async getSettings(): Promise<AppSettings> {
+    return await this.request(`${API_URL}/settings`);
+  }
+
+  async updateSettings(settings: Partial<AppSettings>, smtpPassword?: string): Promise<AppSettings> {
+    return await this.putJson(`${API_URL}/settings`, { ...settings, smtpPassword });
+  }
+
+  async testSmtp(testEmail: string, smtp?: Partial<AppSettings['smtp']>, smtpPassword?: string): Promise<{ success: boolean; message: string }> {
+    return await this.postJson(`${API_URL}/settings/test-smtp`, { testEmail, smtp, smtpPassword });
+  }
+
+  async uploadLogo(file: File): Promise<{ logoUrl: string }> {
+    const form = new FormData();
+    form.append('logo', file);
+    return await this.uploadForm(`${API_URL}/settings/logo`, form);
+  }
+
+  async uploadFavicon(file: File): Promise<{ faviconUrl: string }> {
+    const form = new FormData();
+    form.append('favicon', file);
+    return await this.uploadForm(`${API_URL}/settings/favicon`, form);
+  }
+
+  async addContactEmail(email: string): Promise<string[]> {
+    const result = await this.postJson(`${API_URL}/settings/contact-emails`, { email });
+    return result.notificationEmails;
+  }
+
+  async removeContactEmail(email: string): Promise<string[]> {
+    const result = await this.request(`${API_URL}/settings/contact-emails`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
+      body: JSON.stringify({ email }),
+    });
+    return result.notificationEmails;
+  }
+
+  async updateContactEmail(oldEmail: string, newEmail: string): Promise<string[]> {
+    const result = await this.putJson(`${API_URL}/settings/contact-emails`, { oldEmail, newEmail });
+    return result.notificationEmails;
+  }
+
+  async addUser(user: any): Promise<boolean> {
+    try {
+      await this.createAdmin({ ...user, sendInvitation: true });
+      return true;
+    } catch {
+      if (MOCK_DATA.users.find(u => u.username === user.username)) return false;
+      MOCK_DATA.users.push({ id: Date.now(), ...user });
+      return true;
+    }
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    try { await this.request(`${API_URL}/users/${id}`, { method: 'DELETE' }); }
+    catch { MOCK_DATA.users = MOCK_DATA.users.filter(u => u.id !== id); }
+  }
 
   async getConfig(): Promise<SiteConfig> {
-    try { return await this.request(`${API_URL}/config`); } 
+    try { return await this.request(`${API_URL}/config`, { headers: {} }); }
     catch { return MOCK_DATA.config as SiteConfig; }
   }
+
   async updateConfig(config: SiteConfig): Promise<void> {
     try { await this.putJson(`${API_URL}/config`, config); } catch { }
   }
 
   async getSlides(): Promise<HeroSlide[]> {
-    try { 
-        const data = await this.request(`${API_URL}/slides`);
-        return (data && data.length > 0) ? data : MOCK_DATA.slides;
+    try {
+      const data = await this.request(`${API_URL}/slides`, { headers: {} });
+      return (data && data.length > 0) ? data : MOCK_DATA.slides;
     } catch { return MOCK_DATA.slides; }
   }
+
   async updateSlides(slides: HeroSlide[]): Promise<void> {
     try { await this.putJson(`${API_URL}/slides`, slides); } catch { }
   }
 
   async getAboutContent(): Promise<AboutContent> {
-    try { 
-        const data = await this.request(`${API_URL}/about`);
-        // If object is empty or missing key properties, return mock
-        return (data && data.introTitle) ? data : MOCK_DATA.about as AboutContent;
+    try {
+      const data = await this.request(`${API_URL}/about`, { headers: {} });
+      return (data && data.introTitle) ? data : MOCK_DATA.about as AboutContent;
     } catch { return MOCK_DATA.about as AboutContent; }
   }
+
   async updateAboutContent(content: AboutContent): Promise<void> {
     try { await this.putJson(`${API_URL}/about`, content); } catch { }
   }
 
   async getCompanies(): Promise<Company[]> {
-    try { 
-        const data = await this.request(`${API_URL}/companies`);
-        return (data && data.length > 0) ? data : MOCK_DATA.companies;
+    try {
+      const data = await this.request(`${API_URL}/companies`, { headers: {} });
+      return (data && data.length > 0) ? data : MOCK_DATA.companies;
     } catch { return MOCK_DATA.companies; }
   }
+
   async addCompany(formData: FormData): Promise<void> {
-    try { await fetch(`${API_URL}/companies`, { method: 'POST', body: formData }); } catch { }
+    try { await this.uploadForm(`${API_URL}/companies`, formData); } catch { }
   }
+
   async updateCompany(id: number, formData: FormData): Promise<void> {
-    try { await fetch(`${API_URL}/companies/${id}`, { method: 'PUT', body: formData }); } catch {}
+    try { await this.uploadForm(`${API_URL}/companies/${id}`, formData, 'PUT'); } catch {}
   }
+
   async deleteCompany(id: number): Promise<void> {
     try { await this.request(`${API_URL}/companies/${id}`, { method: 'DELETE' }); } catch { }
   }
 
   async getProducts(): Promise<Product[]> {
-    try { 
-        const data = await this.request(`${API_URL}/products`);
-        return (data && data.length > 0) ? data : MOCK_DATA.products;
+    try {
+      const data = await this.request(`${API_URL}/products`, { headers: {} });
+      return (data && data.length > 0) ? data : MOCK_DATA.products;
     } catch { return MOCK_DATA.products; }
   }
+
   async addProduct(formData: FormData): Promise<void> {
-    try { await fetch(`${API_URL}/products`, { method: 'POST', body: formData }); } catch { }
+    try { await this.uploadForm(`${API_URL}/products`, formData); } catch { }
   }
+
   async updateProduct(id: number, formData: FormData): Promise<void> {
-    try { await fetch(`${API_URL}/products/${id}`, { method: 'PUT', body: formData }); } catch {}
+    try { await this.uploadForm(`${API_URL}/products/${id}`, formData, 'PUT'); } catch {}
   }
+
   async deleteProduct(id: number): Promise<void> {
     try { await this.request(`${API_URL}/products/${id}`, { method: 'DELETE' }); } catch { }
   }
 
-  async getNews(): Promise<NewsItem[]> { 
-    try { 
-        const data = await this.request(`${API_URL}/news`);
-        return (data && data.length > 0) ? data : MOCK_DATA.news;
+  async getNews(): Promise<NewsItem[]> {
+    try {
+      const data = await this.request(`${API_URL}/news`, { headers: {} });
+      return (data && data.length > 0) ? data : MOCK_DATA.news;
     } catch { return MOCK_DATA.news; }
   }
-  async addNews(formData: FormData): Promise<void> { 
-     try { await fetch(`${API_URL}/news`, { method: 'POST', body: formData }); } catch { }
+
+  async addNews(formData: FormData): Promise<void> {
+    try { await this.uploadForm(`${API_URL}/news`, formData); } catch { }
   }
+
   async updateNews(id: number, formData: FormData): Promise<void> {
-      try { await fetch(`${API_URL}/news/${id}`, { method: 'PUT', body: formData }); } catch {}
+    try { await this.uploadForm(`${API_URL}/news/${id}`, formData, 'PUT'); } catch {}
   }
-  async deleteNews(id: number): Promise<void> { 
+
+  async deleteNews(id: number): Promise<void> {
     try { await this.request(`${API_URL}/news/${id}`, { method: 'DELETE' }); } catch { }
   }
 
-  async getMedia(): Promise<MediaItem[]> { 
-    try { return await this.request(`${API_URL}/media`); } 
+  async getMedia(): Promise<MediaItem[]> {
+    try { return await this.request(`${API_URL}/media`, { headers: {} }); }
     catch { return MOCK_DATA.media as any[]; }
   }
-  async addMedia(formData: FormData): Promise<void> { 
-    try { await fetch(`${API_URL}/media`, { method: 'POST', body: formData }); } catch { }
+
+  async addMedia(formData: FormData): Promise<void> {
+    try { await this.uploadForm(`${API_URL}/media`, formData); } catch { }
   }
+
   async updateMedia(id: number, formData: FormData): Promise<void> {
-    try { await fetch(`${API_URL}/media/${id}`, { method: 'PUT', body: formData }); } catch {}
+    try { await this.uploadForm(`${API_URL}/media/${id}`, formData, 'PUT'); } catch {}
   }
-  async deleteMedia(id: number): Promise<void> { 
+
+  async deleteMedia(id: number): Promise<void> {
     try { await this.request(`${API_URL}/media/${id}`, { method: 'DELETE' }); } catch { }
   }
 
-  async getAchievements(): Promise<Achievement[]> { 
-    try { 
-        const data = await this.request(`${API_URL}/achievements`); 
-        return (data && data.length > 0) ? data : MOCK_DATA.achievements;
+  async getAchievements(): Promise<Achievement[]> {
+    try {
+      const data = await this.request(`${API_URL}/achievements`, { headers: {} });
+      return (data && data.length > 0) ? data : MOCK_DATA.achievements;
     } catch { return MOCK_DATA.achievements; }
   }
-  async addAchievement(item: any): Promise<void> { try { await this.postJson(`${API_URL}/achievements`, item); } catch { } }
-  async updateAchievement(id: number, item: any): Promise<void> { try { await this.putJson(`${API_URL}/achievements/${id}`, item); } catch { } }
-  async deleteAchievement(id: number): Promise<void> { try { await this.request(`${API_URL}/achievements/${id}`, { method: 'DELETE' }); } catch { } }
+
+  async addAchievement(item: any): Promise<void> {
+    try { await this.postJson(`${API_URL}/achievements`, item); } catch { }
+  }
+
+  async updateAchievement(id: number, item: any): Promise<void> {
+    try { await this.putJson(`${API_URL}/achievements/${id}`, item); } catch { }
+  }
+
+  async deleteAchievement(id: number): Promise<void> {
+    try { await this.request(`${API_URL}/achievements/${id}`, { method: 'DELETE' }); } catch { }
+  }
 
   async getPartners(): Promise<Partner[]> {
-    try { 
-        const data = await this.request(`${API_URL}/partners`); 
-        return (data && data.length > 0) ? data : MOCK_DATA.partners;
+    try {
+      const data = await this.request(`${API_URL}/partners`, { headers: {} });
+      return (data && data.length > 0) ? data : MOCK_DATA.partners;
     } catch { return MOCK_DATA.partners; }
   }
-  async addPartner(item: any): Promise<void> { try { await this.postJson(`${API_URL}/partners`, item); } catch {} }
-  async updatePartner(id: number, item: any): Promise<void> { try { await this.putJson(`${API_URL}/partners/${id}`, item); } catch {} }
-  async deletePartner(id: number): Promise<void> { try { await this.request(`${API_URL}/partners/${id}`, { method: 'DELETE' }); } catch {} }
+
+  async addPartner(item: any): Promise<void> {
+    try { await this.postJson(`${API_URL}/partners`, item); } catch {}
+  }
+
+  async updatePartner(id: number, item: any): Promise<void> {
+    try { await this.putJson(`${API_URL}/partners/${id}`, item); } catch {}
+  }
+
+  async deletePartner(id: number): Promise<void> {
+    try { await this.request(`${API_URL}/partners/${id}`, { method: 'DELETE' }); } catch {}
+  }
 
   async getServiceCards(): Promise<ServiceCard[]> {
-    try { 
-        const data = await this.request(`${API_URL}/services`); 
-        return (data && data.length > 0) ? data : MOCK_DATA.services;
+    try {
+      const data = await this.request(`${API_URL}/services`, { headers: {} });
+      return (data && data.length > 0) ? data : MOCK_DATA.services;
     } catch { return MOCK_DATA.services; }
   }
-  async updateServiceCards(cards: ServiceCard[]): Promise<void> { try { await this.putJson(`${API_URL}/services`, cards); } catch {} }
+
+  async updateServiceCards(cards: ServiceCard[]): Promise<void> {
+    try { await this.putJson(`${API_URL}/services`, cards); } catch {}
+  }
 
   async getDirectors(): Promise<Director[]> {
-    try { 
-        const data = await this.request(`${API_URL}/directors`); 
-        return (data && data.length > 0) ? data : MOCK_DATA.directors;
+    try {
+      const data = await this.request(`${API_URL}/directors`, { headers: {} });
+      return (data && data.length > 0) ? data : MOCK_DATA.directors;
     } catch { return MOCK_DATA.directors; }
   }
-  async addDirector(item: any): Promise<void> { try { await this.postJson(`${API_URL}/directors`, item); } catch {} }
-  async updateDirector(id: number, item: any): Promise<void> { try { await this.putJson(`${API_URL}/directors/${id}`, item); } catch {} }
-  async deleteDirector(id: number): Promise<void> { try { await this.request(`${API_URL}/directors/${id}`, { method: 'DELETE' }); } catch {} }
+
+  async addDirector(item: any): Promise<void> {
+    try { await this.postJson(`${API_URL}/directors`, item); } catch {}
+  }
+
+  async updateDirector(id: number, item: any): Promise<void> {
+    try { await this.putJson(`${API_URL}/directors/${id}`, item); } catch {}
+  }
+
+  async deleteDirector(id: number): Promise<void> {
+    try { await this.request(`${API_URL}/directors/${id}`, { method: 'DELETE' }); } catch {}
+  }
 
   async getMessages(): Promise<Message[]> {
-    try { return await this.request(`${API_URL}/messages`); } 
+    try { return await this.request(`${API_URL}/messages`); }
     catch { return MOCK_DATA.messages as any[]; }
   }
-  async sendMessage(msg: Omit<Message, 'id' | 'date'>): Promise<void> { try { await this.postJson(`${API_URL}/messages`, msg); } catch { } }
+
+  async sendMessage(msg: Omit<Message, 'id' | 'date'>): Promise<void> {
+    try { await this.postJson(`${API_URL}/messages`, msg, false); } catch { }
+  }
 
   async trackVisit(): Promise<void> {
     if (sessionStorage.getItem('visited')) return;
-    try { await fetch(`${API_URL}/visit`, { method: 'POST' }); sessionStorage.setItem('visited', 'true'); } catch { }
+    try {
+      await fetch(`${API_URL}/visit`, { method: 'POST' });
+      sessionStorage.setItem('visited', 'true');
+    } catch { }
   }
+
   async getVisitors(): Promise<Visitor[]> {
-    try { return await this.request(`${API_URL}/visit`); } catch { return MOCK_DATA.visitors as any[]; }
+    try { return await this.request(`${API_URL}/visitors`); }
+    catch { return MOCK_DATA.visitors as any[]; }
   }
 }
 

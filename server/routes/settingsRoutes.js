@@ -35,6 +35,13 @@ router.post(
   upload.single('favicon'),
   settingsController.uploadFavicon
 );
+router.post(
+  '/settings/test-upload',
+  authenticate,
+  requirePermission('settings'),
+  upload.single('image'),
+  settingsController.testUpload
+);
 
 router.post(
   '/settings/contact-emails',

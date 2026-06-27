@@ -19,6 +19,13 @@ export const cloudinaryService = {
 
   configure() {
     const cfg = env.cloudinary;
+    
+    logger.info('upload', 'Cloudinary Config Check', {
+      cloudName: cfg.cloudName || 'MISSING',
+      hasApiKey: !!cfg.apiKey,
+      hasApiSecret: !!cfg.apiSecret,
+    });
+
     if (cfg.cloudName && cfg.apiKey && cfg.apiSecret) {
       cloudinary.config({
         cloud_name: cfg.cloudName,
@@ -27,9 +34,11 @@ export const cloudinaryService = {
         secure: true,
       });
       configured = true;
+      logger.info('upload', 'Cloudinary Configured', { cloudName: cfg.cloudName });
       return true;
     }
     configured = false;
+    logger.warn('upload', 'Cloudinary Not Configured - Missing credentials');
     return false;
   },
 
@@ -80,6 +89,8 @@ export const cloudinaryService = {
       ? [{ width: 400, height: 400, crop: 'limit' }, { quality: 'auto', fetch_format: 'webp' }]
       : [{ quality: 'auto', fetch_format: 'webp' }];
 
+    logger.info('upload', 'Starting Cloudinary upload', { folder, bufferSize: buffer.length });
+
     return new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         {
@@ -89,7 +100,20 @@ export const cloudinaryService = {
           ...options.uploadOptions,
         },
         (err, result) => {
-          if (err) return reject(err);
+          if (err) {
+            logger.error('Cloudinary upload failed', {
+              error: err.message,
+              http_code: err.http_code,
+              name: err.name,
+              folder,
+            });
+            return reject(err);
+          }
+          logger.info('upload', 'Cloudinary upload succeeded', {
+            publicId: result.public_id,
+            url: result.secure_url,
+            bytes: result.bytes,
+          });
           resolve(result);
         }
       );
@@ -98,9 +122,21 @@ export const cloudinaryService = {
   },
 
   async uploadFromMulter(file, folder = 'expro') {
-    if (!file?.buffer) throw new Error('No file buffer');
+    if (!file?.buffer) {
+      logger.error('upload', 'No file buffer provided', { filename: file?.originalname });
+      throw new Error('No file buffer');
+    }
+
+    logger.info('upload', 'Uploading from multer', {
+      filename: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size,
+      folder,
+    });
+
     const result = await this.uploadBuffer(file.buffer, { folder });
     logger.upload(result.public_id, file.mimetype, '', 'cloudinary');
+    
     return {
       url: result.secure_url,
       publicId: result.public_id,

@@ -137,6 +137,59 @@ export const settingsController = {
       return sendError(res, err.message, 400);
     }
   },
+
+  async testUpload(req, res) {
+    try {
+      if (!req.file) {
+        return sendError(res, 'No file uploaded', 400);
+      }
+
+      logger.info('upload', 'Test upload received', {
+        filename: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        fieldname: req.file.fieldname,
+      });
+
+      const result = await cloudinaryService.uploadFromMulter(req.file, 'test-uploads');
+
+      await auditService.log(req, 'Test Upload', {
+        filename: req.file.originalname,
+        url: result.url,
+      });
+
+      return sendSuccess(res, 'Upload test successful', {
+        url: result.url,
+        publicId: result.publicId,
+        thumbnail: result.thumbnail,
+        file: {
+          originalname: req.file.originalname,
+          mimetype: req.file.mimetype,
+          size: req.file.size,
+        },
+      });
+    } catch (err) {
+      logger.error('Test upload failed', {
+        error: err.message,
+        http_code: err.http_code,
+        name: err.name,
+        file: req.file ? {
+          originalname: req.file.originalname,
+          mimetype: req.file.mimetype,
+        } : null,
+      });
+      return sendError(
+        res,
+        err.message || 'Upload failed',
+        400,
+        {
+          error: err.message,
+          http_code: err.http_code,
+          name: err.name,
+        }
+      );
+    }
+  },
 };
 
 export default settingsController;

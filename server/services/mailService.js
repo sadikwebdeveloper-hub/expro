@@ -29,24 +29,29 @@ const buildTransportOptions = (smtp) => {
     auth: {
       user: smtp.username || smtp.user,
       pass: smtp.password || smtp.pass,
+      // Force LOGIN auth method for Gmail to avoid XOAUTH2 issues
+      method: 'LOGIN',
     },
     connectionTimeout: SMTP_TIMEOUT_MS,
     greetingTimeout: SMTP_TIMEOUT_MS,
     socketTimeout: SMTP_TIMEOUT_MS,
+    // Use minimal TLS configuration to avoid "Unsupported state" errors
+    tls: {
+      minVersion: 'TLSv1.2',
+      servername: smtp.host,
+      rejectUnauthorized: true,
+    },
   };
-
-  // For STARTTLS on port 587, require TLS
-  if (port === 587) {
-    options.requireTLS = true;
-  }
 
   logger.smtp('SMTP Transport Options', {
     host: options.host,
     port: options.port,
     secure: options.secure,
-    requireTLS: options.requireTLS,
     family: options.family,
+    authMethod: options.auth.method,
+    tlsMinVersion: options.tls.minVersion,
     username: options.auth.user,
+    passwordLength: (options.auth.pass || '').length,
   });
 
   return options;
@@ -62,6 +67,10 @@ const createTransporter = async (smtpOverride = null) => {
   const username = smtp.username || smtp.user;
   const password = smtp.password || smtp.pass;
 
+  // Log SMTP source detection
+  const source = smtpOverride ? 'OVERRIDE' : (env.smtp.host && env.smtp.user ? 'ENV_FALLBACK' : 'DATABASE');
+  logger.smtp('SMTP Config Source', { source, host: smtp.host, username, passwordLength: password?.length || 0 });
+
   if (!smtp.host || !username || !password) {
     logger.smtp('SMTP Configuration Missing', { hasHost: !!smtp.host, hasUsername: !!username, hasPassword: !!password });
     return { transporter: null, smtp };
@@ -71,8 +80,8 @@ const createTransporter = async (smtpOverride = null) => {
 
   // Log resolved host information
   try {
-    const addresses = await dns.promises.resolve(smtp.host);
-    logger.smtp('SMTP Host Resolved', { host: smtp.host, addresses, preferred: addresses[0] });
+    const addresses = await dns.promises.resolve4(smtp.host);
+    logger.smtp('SMTP Host IPv4 Resolved', { host: smtp.host, addresses, preferred: addresses[0] });
   } catch (err) {
     logger.smtp('DNS Resolution Warning', { host: smtp.host, error: err.message });
   }

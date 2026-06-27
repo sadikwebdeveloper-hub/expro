@@ -243,17 +243,22 @@ export const settingsService = {
         delete smtpUpdate.passwordEncrypted;
         delete smtpUpdate.hasPassword;
 
-        if (smtpUpdate.password === '' || smtpUpdate.password === '••••••••') {
-          delete smtpUpdate.password;
-        }
+        // Check if password field was explicitly set to empty string (clear password)
+        const shouldClearPassword = smtpUpdate.password === '';
 
+        // Remove password field from update object
+        delete smtpUpdate.password;
+
+        // Only update encrypted password if:
+        // 1. A new password was provided (smtpPassword), OR
+        // 2. Password should be cleared (explicit empty string)
         if (smtpPassword) {
           smtpUpdate.passwordEncrypted = encryptSecret(smtpPassword.trim());
-        } else if (smtpUpdate.password === '') {
+        } else if (shouldClearPassword) {
           smtpUpdate.passwordEncrypted = '';
         }
+        // If neither, passwordEncrypted is not updated (preserves existing password)
 
-        delete smtpUpdate.password;
         updates.smtp = smtpUpdate;
       }
 

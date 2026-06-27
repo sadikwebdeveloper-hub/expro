@@ -86,7 +86,7 @@ export const contentController = {
     const item = {
       id: Date.now(),
       ...sanitizeObject(req.body),
-      ...(key !== 'partners' && key !== 'achievements' && key !== 'directors' ? { image: imageUrl } : {}),
+      ...(key !== 'partners' && key !== 'achievements' ? { image: imageUrl } : {}),
     };
     if (key === 'partners' && req.file) item.logo = imageUrl;
     if (!data[key]) data[key] = [];

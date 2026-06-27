@@ -104,8 +104,11 @@ router.delete('/partners/:id', authenticate, requireAdmin, (req, res) => {
   return contentController.deleteItem(req, res);
 });
 
-router.post('/directors', authenticate, requireAdmin, (req, res) =>
-  contentController.simpleCreate(req, res, 'directors')
+router.post('/directors', authenticate, requireAdmin, upload.single('image'), (req, res) =>
+  contentController.createWithUpload(req, res, 'directors')
+);
+router.put('/directors/:id', authenticate, requireAdmin, upload.single('image'), (req, res) =>
+  contentController.updateWithUpload(req, res, 'directors')
 );
 router.delete('/directors/:id', authenticate, requireAdmin, (req, res) => {
   req.params.key = 'directors';

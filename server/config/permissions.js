@@ -13,7 +13,7 @@ export const PERMISSIONS = [
   'auditLogs',
 ];
 
-export const ROLES = ['super_admin', 'admin', 'manager', 'moderator', 'viewer'];
+export const ROLES = ['super_admin', 'admin', 'manager', 'moderator', 'editor', 'viewer'];
 
 export const DEFAULT_ROLE_PERMISSIONS = {
   super_admin: Object.fromEntries(PERMISSIONS.map((p) => [p, true])),
@@ -40,6 +40,20 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     reports: true,
     settings: false,
     visitorTracking: true,
+    pages: true,
+    subsidiaries: true,
+    admins: false,
+    auditLogs: false,
+  },
+  editor: {
+    dashboard: true,
+    products: true,
+    users: false,
+    messages: true,
+    orders: false,
+    reports: false,
+    settings: false,
+    visitorTracking: false,
     pages: true,
     subsidiaries: true,
     admins: false,

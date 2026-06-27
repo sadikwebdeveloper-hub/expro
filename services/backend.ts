@@ -233,12 +233,8 @@ class RealBackend {
   }
 
   async forgotPassword(email: string): Promise<{ otpSent: boolean }> {
-    try {
-      const result = await this.postJson(`${API_URL}/forgot-password`, { email }, false);
-      return result || { otpSent: false };
-    } catch {
-      return { otpSent: false };
-    }
+    const result = await this.postJson(`${API_URL}/forgot-password`, { email }, false);
+    return result || { otpSent: true };
   }
 
   async verifyResetOtp(email: string, otp: string): Promise<boolean> {
@@ -303,13 +299,29 @@ class RealBackend {
   }
 
   async getUsers(): Promise<User[]> {
-    try { return await this.getAdmins(); }
-    catch { return MOCK_DATA.users as User[]; }
+    try {
+      const result = await this.getAdmins();
+      return result.items;
+    } catch { return MOCK_DATA.users as User[]; }
   }
 
-  async getAdmins(): Promise<User[]> {
-    try { return await this.request(`${API_URL}/admins`); }
-    catch { return MOCK_DATA.users as User[]; }
+  async getAdmins(params?: { search?: string; role?: string; status?: string; page?: number }): Promise<{ items: User[]; total: number; page: number; pages: number }> {
+    try {
+      const qs = new URLSearchParams();
+      if (params?.search) qs.set('search', params.search);
+      if (params?.role) qs.set('role', params.role);
+      if (params?.status) qs.set('status', params.status);
+      if (params?.page) qs.set('page', String(params.page));
+      const query = qs.toString();
+      return await this.request(`${API_URL}/admins${query ? `?${query}` : ''}`);
+    } catch {
+      const users = MOCK_DATA.users as User[];
+      return { items: users, total: users.length, page: 1, pages: 1 };
+    }
+  }
+
+  async getDashboardStats(): Promise<any> {
+    return await this.request(`${API_URL}/dashboard/stats`);
   }
 
   async createAdmin(data: {

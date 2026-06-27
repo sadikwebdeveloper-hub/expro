@@ -22,20 +22,25 @@ export const ManageUsers: React.FC = () => {
   const [editPermissions, setEditPermissions] = useState<AdminPermissions>({});
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const load = async () => {
-    const [admins, logs] = await Promise.all([
-      backend.getAdmins().catch(() => [] as User[]),
+    const [adminResult, logs] = await Promise.all([
+      backend.getAdmins({ search, role: roleFilter, page }).catch(() => ({ items: [] as User[], total: 0, page: 1, pages: 1 })),
       backend.getAuditLogs(50).catch(() => [] as AuditLogEntry[]),
     ]);
-    setUsers(admins);
+    setUsers(adminResult.items);
+    setTotalPages(adminResult.pages);
     setAuditLogs(logs);
   };
 
   useEffect(() => {
     load();
     setCurrentUser(backend.getCurrentUser());
-  }, []);
+  }, [search, roleFilter, page]);
 
   const showMsg = (text: string, isError = false) => {
     if (isError) {
@@ -148,6 +153,14 @@ export const ManageUsers: React.FC = () => {
       {msg && <div className="bg-green-100 text-green-700 p-3 rounded">{msg}</div>}
       {err && <div className="bg-red-100 text-red-700 p-3 rounded">{err}</div>}
 
+      <div className="flex flex-wrap gap-3 mb-4">
+        <input className="border p-2 rounded flex-grow max-w-xs" placeholder="Search admins..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+        <select className="border p-2 rounded" value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setPage(1); }}>
+          <option value="">All Roles</option>
+          {ADMIN_ROLES.map(r => <option key={r} value={r}>{r.replace('_', ' ')}</option>)}
+        </select>
+      </div>
+
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm h-fit">
           <h3 className="font-bold text-xl mb-4">Create Admin</h3>
@@ -206,6 +219,14 @@ export const ManageUsers: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-2 mt-4">
+          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="px-4 py-2 border rounded disabled:opacity-50">Prev</button>
+          <span className="px-4 py-2 text-sm text-gray-600">Page {page} of {totalPages}</span>
+          <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="px-4 py-2 border rounded disabled:opacity-50">Next</button>
+        </div>
+      )}
 
       {editing && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">

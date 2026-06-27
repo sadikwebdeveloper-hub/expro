@@ -1,5 +1,6 @@
 import settingsService from '../services/settingsService.js';
 import mailService from '../services/mailService.js';
+import cloudinaryService from '../services/cloudinaryService.js';
 import auditService from '../services/auditService.js';
 import imageService from '../services/imageService.js';
 import { sendSuccess, sendError } from '../utils/response.js';
@@ -8,7 +9,13 @@ import { sanitizeObject } from '../utils/sanitize.js';
 export const settingsController = {
   async getSettings(req, res) {
     const settings = await settingsService.getSettings(false);
-    return sendSuccess(res, 'Settings retrieved', settings);
+    return sendSuccess(res, 'Settings retrieved', {
+      ...settings,
+      systemStatus: {
+        smtp: mailService.getStartupStatus(),
+        cloudinary: cloudinaryService.getStartupStatus(),
+      },
+    });
   },
 
   async updateSettings(req, res) {
@@ -74,40 +81,24 @@ export const settingsController = {
   async uploadLogo(req, res) {
     try {
       const settings = await settingsService.getSettings(true);
-      const logoUrl = await imageService.processBrandingUpload(
-        req.file,
-        'logo',
-        settings.branding.logoUrl
-      );
-
-      const updated = await settingsService.updateSettings({
-        branding: { logoUrl },
-      });
-
-      await auditService.log(req, 'Logo Updated', { logoUrl });
+      const result = await imageService.upload(req.file, 'logo', settings.branding.logoUrl);
+      const updated = await settingsService.updateSettings({ branding: { logoUrl: result.url } });
+      await auditService.log(req, 'Logo Updated', { logoUrl: result.url });
       return sendSuccess(res, 'Logo uploaded successfully', updated.branding);
     } catch (err) {
-      return sendError(res, err.message, 400);
+      return sendError(res, err.message, 400, err.message);
     }
   },
 
   async uploadFavicon(req, res) {
     try {
       const settings = await settingsService.getSettings(true);
-      const faviconUrl = await imageService.processBrandingUpload(
-        req.file,
-        'favicon',
-        settings.branding.faviconUrl
-      );
-
-      const updated = await settingsService.updateSettings({
-        branding: { faviconUrl },
-      });
-
-      await auditService.log(req, 'Favicon Updated', { faviconUrl });
+      const result = await imageService.upload(req.file, 'favicon', settings.branding.faviconUrl);
+      const updated = await settingsService.updateSettings({ branding: { faviconUrl: result.url } });
+      await auditService.log(req, 'Favicon Updated', { faviconUrl: result.url });
       return sendSuccess(res, 'Favicon uploaded successfully', updated.branding);
     } catch (err) {
-      return sendError(res, err.message, 400);
+      return sendError(res, err.message, 400, err.message);
     }
   },
 

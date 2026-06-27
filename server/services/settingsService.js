@@ -60,6 +60,21 @@ const DEFAULT_SETTINGS = {
     enableForgotPassword: true,
     enableWelcome: true,
   },
+  cloudinary: {
+    enabled: Boolean(env.cloudinary?.cloudName),
+    cloudName: env.cloudinary?.cloudName || '',
+  },
+  otp: {
+    length: 6,
+    expiryMinutes: 5,
+    maxAttempts: 5,
+    cooldownSeconds: 60,
+  },
+  security: {
+    maxLoginAttempts: 5,
+    sessionHours: 24,
+    rememberMeDays: 30,
+  },
 };
 
 const envSmtpDefaults = () => ({
@@ -67,9 +82,9 @@ const envSmtpDefaults = () => ({
   port: env.smtp.port || 587,
   username: env.smtp.user || '',
   passwordEncrypted: env.smtp.pass ? encryptSecret(env.smtp.pass.trim()) : '',
-  fromEmail: env.mailFrom || env.smtp.user || '',
-  fromName: 'Expro Group',
-  replyTo: env.mailFrom || '',
+  fromEmail: env.smtp.fromEmail || env.smtp.user || '',
+  fromName: env.smtp.fromName || 'Expro Group',
+  replyTo: env.smtp.replyTo || env.smtp.fromEmail || '',
   enabled: Boolean(env.smtp.host && env.smtp.user && env.smtp.pass),
 });
 

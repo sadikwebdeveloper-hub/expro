@@ -8,6 +8,7 @@ import { upload } from '../config/upload.js';
 import { authenticate, requireAdmin, requireSuperAdmin } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { messageValidation } from '../middleware/validators.js';
+import { contactLimiter } from '../middleware/rateLimit.js';
 
 const router = Router();
 
@@ -119,7 +120,7 @@ router.delete('/users/:id', authenticate, requireSuperAdmin, (req, res) => {
   return contentController.deleteItem(req, res);
 });
 
-router.post('/messages', messageValidation, validate, contentController.createMessage);
+router.post('/messages', contactLimiter, messageValidation, validate, contentController.createMessage);
 router.post('/visit', contentController.trackVisit);
 
 export default router;

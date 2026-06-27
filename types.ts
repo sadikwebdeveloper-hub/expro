@@ -29,7 +29,7 @@ export interface Message {
   date: string;
 }
 
-export type AdminRole = 'super_admin' | 'admin' | 'manager' | 'moderator' | 'viewer';
+export type AdminRole = 'super_admin' | 'admin' | 'manager' | 'moderator' | 'editor' | 'viewer';
 export type AdminStatus = 'active' | 'suspended';
 
 export interface AdminPermissions {
@@ -143,6 +143,13 @@ export interface AppSettings {
     copyright: string;
   };
   smtp: SmtpSettings;
+  cloudinary?: { enabled: boolean; cloudName: string };
+  otp?: { length: number; expiryMinutes: number; maxAttempts: number; cooldownSeconds: number };
+  security?: { maxLoginAttempts: number; sessionHours: number; rememberMeDays: number };
+  systemStatus?: {
+    smtp: { verified: boolean; message: string };
+    cloudinary: { verified: boolean; message: string };
+  };
 }
 
 export interface MediaItem {
@@ -259,4 +266,4 @@ export const PERMISSION_LABELS: Record<keyof AdminPermissions, string> = {
   auditLogs: 'Audit Logs',
 };
 
-export const ADMIN_ROLES: AdminRole[] = ['super_admin', 'admin', 'manager', 'moderator', 'viewer'];
+export const ADMIN_ROLES: AdminRole[] = ['super_admin', 'admin', 'manager', 'moderator', 'editor', 'viewer'];

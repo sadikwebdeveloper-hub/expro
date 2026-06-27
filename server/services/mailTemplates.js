@@ -69,6 +69,15 @@ export const templates = {
        <p>This is a test email from your Expro Group admin panel. Your SMTP configuration is working correctly.</p>`
     ),
 
+  contactConfirmation: ({ name, subject }) =>
+    baseTemplate(
+      'Message Received',
+      `<p>Hi <strong>${name}</strong>,</p>
+       <p>Thank you for contacting Expro Group. We have received your message regarding <strong>${subject}</strong>.</p>
+       <p>Our team will review it and respond as soon as possible.</p>
+       <p style="color:#6b7280;font-size:13px;">This is an automated confirmation. Please do not reply to this email.</p>`
+    ),
+
   passwordResetSuccess: ({ fullName }) =>
     baseTemplate(
       'Password Reset Successful',

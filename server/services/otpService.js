@@ -1,15 +1,15 @@
 import bcrypt from 'bcrypt';
 import db from '../database/index.js';
 import mailService from './mailService.js';
-import { logger } from './logger.js';
+import logger from './logger.js';
 
 const OTP_EXPIRY_MS = 5 * 60 * 1000;
-const MAX_OTP_PER_WINDOW = 5;
+const MAX_OTP_REQUESTS = 5;
+const MAX_VERIFY_ATTEMPTS = 5;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 60 * 1000;
 
-const generateOtpCode = () =>
-  String(Math.floor(100000 + Math.random() * 900000));
+const generateOtpCode = () => String(Math.floor(100000 + Math.random() * 900000));
 
 const cleanupExpiredOtps = (otps = []) => {
   const now = Date.now();
@@ -36,7 +36,6 @@ const getLastOtpTime = (otps, email, purpose) => {
 export const otpService = {
   async createAndSendOtp(email, purpose = 'verification', ip = '') {
     const normalizedEmail = email.toLowerCase();
-
     let rateLimited = false;
     let otpRecord = null;
     let plainOtp = null;
@@ -44,7 +43,7 @@ export const otpService = {
     await db.update(async (data) => {
       data.otps = cleanupExpiredOtps(data.otps || []);
 
-      if (countRecentRequests(data.otps, normalizedEmail, purpose) >= MAX_OTP_PER_WINDOW) {
+      if (countRecentRequests(data.otps, normalizedEmail, purpose) >= MAX_OTP_REQUESTS) {
         rateLimited = true;
         return data;
       }
@@ -66,6 +65,7 @@ export const otpService = {
         purpose,
         expiresAt: now + OTP_EXPIRY_MS,
         used: false,
+        attempts: 0,
         createdAt: now,
       };
 
@@ -74,21 +74,21 @@ export const otpService = {
     });
 
     if (rateLimited) {
-      throw new Error('Too many OTP requests. Please try again later.');
+      throw new Error('Too many OTP requests. Please wait 60 seconds and try again.');
     }
 
     logger.otpRequest(normalizedEmail, purpose, ip);
-
     await mailService.sendOtpEmail(normalizedEmail, plainOtp, purpose);
 
     return { email: normalizedEmail, expiresAt: otpRecord.expiresAt };
   },
 
-  async verifyOtp(email, code, purpose = 'verification', { consume = true } = {}) {
+  async verifyOtp(email, code, purpose = 'verification', { consume = true, ip = '' } = {}) {
     const normalizedEmail = email.toLowerCase();
     const now = Date.now();
     let verified = false;
     let otpId = null;
+    let errorMessage = 'Invalid or expired OTP';
 
     await db.update(async (data) => {
       data.otps = cleanupExpiredOtps(data.otps || []);
@@ -103,39 +103,41 @@ export const otpService = {
 
       if (!otp) return data;
 
-      const match = await bcrypt.compare(code, otp.codeHash);
-      if (!match) return data;
+      otp.attempts = (otp.attempts || 0) + 1;
 
-      if (consume) {
+      if (otp.attempts > MAX_VERIFY_ATTEMPTS) {
         otp.used = true;
-      } else {
-        otp.verified = true;
+        errorMessage = 'Maximum OTP attempts exceeded. Request a new code.';
+        return data;
       }
+
+      const match = await bcrypt.compare(code, otp.codeHash);
+      if (!match) {
+        errorMessage = `Invalid OTP. ${MAX_VERIFY_ATTEMPTS - otp.attempts} attempts remaining.`;
+        return data;
+      }
+
+      if (consume) otp.used = true;
+      else otp.verified = true;
 
       verified = true;
       otpId = otp.id;
       return data;
     });
 
-    return verified ? { email: normalizedEmail, otpId } : null;
+    logger.otpVerify(normalizedEmail, verified, ip);
+
+    if (!verified) {
+      const err = new Error(errorMessage);
+      err.statusCode = 400;
+      throw err;
+    }
+
+    return { email: normalizedEmail, otpId };
   },
 
   async resendOtp(email, purpose = 'verification', ip = '') {
     return this.createAndSendOtp(email, purpose, ip);
-  },
-
-  async hasValidVerifiedOtp(email, purpose = 'reset') {
-    const normalizedEmail = email.toLowerCase();
-    const data = await db.getAll();
-    const now = Date.now();
-
-    return (data.otps || []).some(
-      (otp) =>
-        otp.email === normalizedEmail &&
-        otp.purpose === purpose &&
-        otp.used &&
-        otp.expiresAt > now
-    );
   },
 };
 

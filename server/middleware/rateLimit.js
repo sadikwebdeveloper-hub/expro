@@ -21,5 +21,13 @@ export const otpLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: 'Too many OTP requests', data: null },
+  message: { success: false, message: 'Too many OTP requests', error: 'Too many OTP requests', data: null },
+});
+
+export const contactLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many contact form submissions', error: 'Rate limit exceeded', data: null },
 });

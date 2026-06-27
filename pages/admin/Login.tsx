@@ -57,15 +57,11 @@ export const Login: React.FC = () => {
     e.preventDefault();
     setForgotMsg('Sending request...');
     try {
-      const result = await backend.forgotPassword(forgotEmail);
-      if (result.otpSent) {
-        setForgotMsg('If the email matches an account, we sent a verification code.');
-        setForgotStep('otp');
-      } else {
-        setForgotMsg('If the email matches an account, we sent a verification code.');
-      }
+      await backend.forgotPassword(forgotEmail);
+      setForgotMsg('OTP sent to your email.');
+      setForgotStep('otp');
     } catch (err: any) {
-      setForgotMsg(err.message || 'An error occurred. Please try again.');
+      setForgotMsg(err.message || 'Email not found');
     }
   };
 

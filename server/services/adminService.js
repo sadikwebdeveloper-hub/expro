@@ -11,9 +11,34 @@ import env from '../config/env.js';
 const generateTempPassword = () => crypto.randomBytes(4).toString('hex') + 'A1!';
 
 export const adminService = {
-  async getAllAdmins() {
+  async getAllAdmins(options = {}) {
+    const { search = '', role = '', status = '', page = 1, limit = 20, sort = 'createdAt' } = options;
     const data = await db.getAll();
-    return (data.users || []).map((user) => stripPassword(this.normalizeAdmin(user)));
+    let users = (data.users || []).map((user) => stripPassword(this.normalizeAdmin(user)));
+
+    if (search) {
+      const q = search.toLowerCase();
+      users = users.filter(
+        (u) =>
+          u.username?.toLowerCase().includes(q) ||
+          u.fullName?.toLowerCase().includes(q) ||
+          u.email?.toLowerCase().includes(q)
+      );
+    }
+    if (role) users = users.filter((u) => u.role === role);
+    if (status) users = users.filter((u) => u.status === status);
+
+    users.sort((a, b) => {
+      if (sort === 'name') return (a.fullName || '').localeCompare(b.fullName || '');
+      if (sort === 'role') return (a.role || '').localeCompare(b.role || '');
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
+
+    const total = users.length;
+    const start = (page - 1) * limit;
+    const items = users.slice(start, start + limit);
+
+    return { items, total, page, limit, pages: Math.ceil(total / limit) || 1 };
   },
 
   normalizeAdmin(user) {

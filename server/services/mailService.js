@@ -2,103 +2,180 @@ import nodemailer from 'nodemailer';
 import env from '../config/env.js';
 import settingsService from './settingsService.js';
 import templates from './mailTemplates.js';
+import logger from './logger.js';
+
+const SMTP_TIMEOUT_MS = 15000;
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 1500;
+
+let startupStatus = { verified: false, message: 'Not verified yet', lastCheck: null };
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const buildTransportOptions = (smtp) => {
-  const secure = smtp.port === 465;
+  const port = Number(smtp.port) || 587;
+  const secure = smtp.encryption === 'SSL' || smtp.secure === true || port === 465;
+
   return {
     host: smtp.host,
-    port: smtp.port,
+    port,
     secure,
     auth: {
-      user: smtp.username,
-      pass: smtp.password,
+      user: smtp.username || smtp.user,
+      pass: smtp.password || smtp.pass,
     },
-    ...(smtp.port === 587 ? { requireTLS: true } : {}),
+    connectionTimeout: SMTP_TIMEOUT_MS,
+    greetingTimeout: SMTP_TIMEOUT_MS,
+    socketTimeout: SMTP_TIMEOUT_MS,
+    ...(smtp.encryption === 'TLS' && !secure ? { requireTLS: true } : {}),
   };
 };
 
-const createTransporter = async (overrideSmtp = null) => {
-  const smtp = overrideSmtp || (await settingsService.getEffectiveSmtpConfig());
+const resolveSmtp = async (override = null) => {
+  if (override) return override;
+  return settingsService.getEffectiveSmtpConfig();
+};
 
-  if (!smtp.host || !smtp.username || !smtp.password) {
-    console.log('[SMTP DEBUG] Missing credentials:', {
-      hasHost: !!smtp.host,
-      hasUsername: !!smtp.username,
-      hasPassword: !!smtp.password,
-      passwordLength: smtp.password?.length || 0
-    });
+const createTransporter = async (smtpOverride = null) => {
+  const smtp = await resolveSmtp(smtpOverride);
+  const username = smtp.username || smtp.user;
+  const password = smtp.password || smtp.pass;
+
+  if (!smtp.host || !username || !password) {
     return { transporter: null, smtp };
   }
 
-  const options = buildTransportOptions(smtp);
-  console.log('[SMTP DEBUG] Transport options:', {
-    host: options.host,
-    port: options.port,
-    secure: options.secure,
-    requireTLS: options.requireTLS,
-    username: options.auth.user,
-    passwordLength: options.auth.pass?.length || 0
-  });
+  const transporter = nodemailer.createTransport(buildTransportOptions({ ...smtp, username, password }));
+  return { transporter, smtp: { ...smtp, username, password } };
+};
 
-  const transporter = nodemailer.createTransport(options);
-  return { transporter, smtp };
+const withRetry = async (fn, label) => {
+  let lastError;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      logger.smtp(`${label} failed (attempt ${attempt}/${MAX_RETRIES})`, { error: err.message });
+      if (attempt < MAX_RETRIES) await sleep(RETRY_DELAY_MS * attempt);
+    }
+  }
+  throw lastError;
 };
 
 export const mailService = {
+  getStartupStatus() {
+    return startupStatus;
+  },
+
+  async verifyOnStartup() {
+    try {
+      const smtp = await settingsService.getEffectiveSmtpConfig();
+      if (!smtp.enabled) {
+        startupStatus = {
+          verified: false,
+          message: '❌ SMTP Failed — SMTP is disabled in settings',
+          lastCheck: new Date().toISOString(),
+        };
+        logger.smtp(startupStatus.message);
+        console.log(startupStatus.message);
+        return startupStatus;
+      }
+
+      const { transporter } = await createTransporter();
+      if (!transporter) {
+        startupStatus = {
+          verified: false,
+          message: '❌ SMTP Failed — Missing host, username, or password',
+          lastCheck: new Date().toISOString(),
+        };
+        logger.smtp(startupStatus.message);
+        console.log(startupStatus.message);
+        return startupStatus;
+      }
+
+      await withRetry(() => transporter.verify(), 'SMTP startup verify');
+      startupStatus = {
+        verified: true,
+        message: '✓ SMTP Connected',
+        lastCheck: new Date().toISOString(),
+        host: smtp.host,
+        port: smtp.port,
+      };
+      logger.smtp('✓ SMTP Connected on startup', { host: smtp.host, port: smtp.port });
+      console.log('✓ SMTP Connected');
+      return startupStatus;
+    } catch (err) {
+      startupStatus = {
+        verified: false,
+        message: `❌ SMTP Failed — ${err.message}`,
+        lastCheck: new Date().toISOString(),
+      };
+      logger.smtp(startupStatus.message, { error: err.message });
+      console.error(startupStatus.message);
+      return startupStatus;
+    }
+  },
+
   async isConfigured() {
     const smtp = await settingsService.getEffectiveSmtpConfig();
-    return Boolean(smtp.enabled && smtp.host && smtp.username && smtp.password);
+    return Boolean(smtp.enabled && smtp.host && (smtp.username || smtp.user) && (smtp.password || smtp.pass));
   },
 
   async sendWithConfig({ to, subject, text, html, smtpOverride = null }) {
     const { transporter, smtp } = await createTransporter(smtpOverride);
 
     if (!transporter) {
-      if (env.isProduction) {
-        throw new Error('Email service is not configured');
-      }
-      console.warn('[mail] SMTP not configured. Would send to:', to, subject);
+      const msg = 'Email service is not configured';
+      logger.smtp(`Send blocked: ${msg}`, { to, subject });
+      if (env.isProduction) throw new Error(msg);
+      console.warn(`[mail] DEV MODE — would send to ${to}: ${subject}`);
       return { messageId: 'dev-mode', accepted: [to] };
     }
 
-    const from = smtp.fromName
-      ? `"${smtp.fromName}" <${smtp.fromEmail || smtp.username}>`
-      : smtp.fromEmail || smtp.username;
+    const fromEmail = smtp.fromEmail || smtp.fromName ? smtp.fromEmail : smtp.username;
+    const from = smtp.fromName ? `"${smtp.fromName}" <${fromEmail || smtp.username}>` : fromEmail || smtp.username;
 
-    return transporter.sendMail({
-      from,
-      to,
-      replyTo: smtp.replyTo || smtp.fromEmail,
-      subject,
-      text,
-      html: html || text,
-    });
+    const result = await withRetry(
+      () =>
+        transporter.sendMail({
+          from,
+          to,
+          replyTo: smtp.replyTo || fromEmail,
+          subject,
+          text,
+          html: html || text,
+        }),
+      'sendMail'
+    );
+
+    logger.smtp('Email sent', { to, subject, messageId: result.messageId });
+    return result;
   },
 
   async testConnection(testEmail, smtpOverride = null) {
     try {
       const { transporter, smtp } = await createTransporter(smtpOverride);
       if (!transporter) {
-        return { success: false, message: 'SMTP Authentication Failed - not configured' };
+        return { success: false, message: '❌ SMTP Authentication Failed — not configured' };
       }
 
-      await transporter.verify();
+      await withRetry(() => transporter.verify(), 'SMTP test verify');
 
       if (testEmail) {
-        await transporter.sendMail({
-          from: smtp.fromName
-            ? `"${smtp.fromName}" <${smtp.fromEmail || smtp.username}>`
-            : smtp.fromEmail || smtp.username,
+        await this.sendWithConfig({
           to: testEmail,
           subject: 'Expro Group - SMTP Test',
-          text: 'SMTP Connected Successfully',
+          text: '✓ SMTP Connected Successfully',
           html: templates.smtpTest(),
+          smtpOverride,
         });
       }
 
-      return { success: true, message: 'SMTP Connected Successfully' };
+      return { success: true, message: '✓ SMTP Connected Successfully' };
     } catch (err) {
-      return { success: false, message: `SMTP Authentication Failed - ${err.message}` };
+      logger.smtp('SMTP test failed', { error: err.message });
+      return { success: false, message: `❌ SMTP Authentication Failed — ${err.message}` };
     }
   },
 
@@ -106,7 +183,7 @@ export const mailService = {
     const smtp = await settingsService.getEffectiveSmtpConfig();
     if (!smtp.enabled || !smtp.enableOtp) {
       if (!env.isProduction) {
-        console.warn('[mail] OTP for', to, ':', otp);
+        logger.smtp('DEV OTP', { to, otp, purpose });
         return { messageId: 'dev-mode' };
       }
       throw new Error('OTP email is disabled');
@@ -128,15 +205,14 @@ export const mailService = {
   async sendContactFormNotification(messageData) {
     const smtp = await settingsService.getEffectiveSmtpConfig();
     if (!smtp.enabled || !smtp.enableContactForm) {
-      console.warn('[mail] Contact form email disabled or SMTP not configured');
+      logger.warn('smtp', 'Contact form admin notification skipped — SMTP disabled');
       return null;
     }
 
     const settings = await settingsService.getSettings(true);
     const recipients = settings.contact.notificationEmails || [];
-
     if (!recipients.length) {
-      console.warn('[mail] No notification emails configured');
+      logger.warn('smtp', 'No notification emails configured');
       return null;
     }
 
@@ -147,16 +223,31 @@ export const mailService = {
     return Promise.all(
       recipients.map((to) =>
         this.sendWithConfig({ to, subject, text, html }).catch((err) => {
-          console.error('[mail] Failed to send to', to, err.message);
+          logger.error('Contact notification failed', { to, error: err.message });
           return null;
         })
       )
     );
   },
 
-  async sendAdminInvitation({ to, fullName, username, tempPassword, loginUrl }) {
+  async sendContactConfirmation(messageData) {
     const smtp = await settingsService.getEffectiveSmtpConfig();
     if (!smtp.enabled) return null;
+
+    return this.sendWithConfig({
+      to: messageData.email,
+      subject: 'Expro Group - We received your message',
+      text: `Hi ${messageData.name},\n\nThank you for contacting Expro Group. We received your message and will respond shortly.\n\nSubject: ${messageData.subject}`,
+      html: templates.contactConfirmation(messageData),
+    });
+  },
+
+  async sendAdminInvitation({ to, fullName, username, tempPassword, loginUrl }) {
+    const smtp = await settingsService.getEffectiveSmtpConfig();
+    if (!smtp.enabled) {
+      logger.warn('smtp', 'Admin invitation skipped — SMTP disabled', { to });
+      return null;
+    }
 
     return this.sendWithConfig({
       to,

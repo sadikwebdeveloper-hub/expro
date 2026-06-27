@@ -276,6 +276,16 @@ export const ManageSettings: React.FC = () => {
           </div>
         </Section>
 
+        <Section title="Cloudinary (Media Storage)">
+          <div className="md:col-span-2 bg-gray-50 p-4 rounded-lg text-sm text-gray-600 space-y-2">
+            <p>Cloudinary is configured via environment variables on Railway:</p>
+            <code className="block bg-white p-2 rounded border">CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET</code>
+            <p className={`font-bold ${settings.systemStatus?.cloudinary?.verified ? 'text-green-600' : 'text-red-600'}`}>
+              {settings.systemStatus?.cloudinary?.message || 'Status unknown — restart server after setting env vars'}
+            </p>
+          </div>
+        </Section>
+
         <Section title="SMTP Settings">
           <Field label="SMTP Host" name="host" value={settings.smtp.host} onChange={(n, v) => patch('smtp', n, v)} />
           <Field label="SMTP Port" name="port" value={settings.smtp.port} onChange={(n, v) => patch('smtp', 'port', Number(v) || 587)} type="number" />

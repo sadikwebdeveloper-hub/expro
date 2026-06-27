@@ -5,8 +5,16 @@ import { sanitizeObject } from '../utils/sanitize.js';
 
 export const adminController = {
   async list(req, res) {
-    const admins = await adminService.getAllAdmins();
-    return sendSuccess(res, 'Admins retrieved', admins);
+    const { search = '', role = '', status = '', page = 1, limit = 20, sort = 'createdAt' } = req.query;
+    const result = await adminService.getAllAdmins({
+      search: String(search),
+      role: String(role),
+      status: String(status),
+      page: Number(page) || 1,
+      limit: Number(limit) || 20,
+      sort: String(sort),
+    });
+    return sendSuccess(res, 'Admins retrieved', result);
   },
 
   async create(req, res) {

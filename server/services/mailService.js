@@ -1,8 +1,12 @@
 import nodemailer from 'nodemailer';
+import dns from 'dns';
 import env from '../config/env.js';
 import settingsService from './settingsService.js';
 import templates from './mailTemplates.js';
 import logger from './logger.js';
+
+// Force Node.js to prefer IPv4 to avoid IPv6 connection issues
+dns.setDefaultResultOrder('ipv4first');
 
 const SMTP_TIMEOUT_MS = 15000;
 const MAX_RETRIES = 3;
@@ -14,12 +18,14 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const buildTransportOptions = (smtp) => {
   const port = Number(smtp.port) || 587;
-  const secure = smtp.encryption === 'SSL' || smtp.secure === true || port === 465;
+  // Auto-determine secure based on port: 465 = SSL (secure:true), 587 = STARTTLS (secure:false)
+  const secure = port === 465;
 
-  return {
+  const options = {
     host: smtp.host,
     port,
     secure,
+    family: 4, // Force IPv4
     auth: {
       user: smtp.username || smtp.user,
       pass: smtp.password || smtp.pass,
@@ -27,8 +33,23 @@ const buildTransportOptions = (smtp) => {
     connectionTimeout: SMTP_TIMEOUT_MS,
     greetingTimeout: SMTP_TIMEOUT_MS,
     socketTimeout: SMTP_TIMEOUT_MS,
-    ...(smtp.encryption === 'TLS' && !secure ? { requireTLS: true } : {}),
   };
+
+  // For STARTTLS on port 587, require TLS
+  if (port === 587) {
+    options.requireTLS = true;
+  }
+
+  logger.smtp('SMTP Transport Options', {
+    host: options.host,
+    port: options.port,
+    secure: options.secure,
+    requireTLS: options.requireTLS,
+    family: options.family,
+    username: options.auth.user,
+  });
+
+  return options;
 };
 
 const resolveSmtp = async (override = null) => {
@@ -42,10 +63,20 @@ const createTransporter = async (smtpOverride = null) => {
   const password = smtp.password || smtp.pass;
 
   if (!smtp.host || !username || !password) {
+    logger.smtp('SMTP Configuration Missing', { hasHost: !!smtp.host, hasUsername: !!username, hasPassword: !!password });
     return { transporter: null, smtp };
   }
 
   const transporter = nodemailer.createTransport(buildTransportOptions({ ...smtp, username, password }));
+
+  // Log resolved host information
+  try {
+    const addresses = await dns.promises.resolve(smtp.host);
+    logger.smtp('SMTP Host Resolved', { host: smtp.host, addresses, preferred: addresses[0] });
+  } catch (err) {
+    logger.smtp('DNS Resolution Warning', { host: smtp.host, error: err.message });
+  }
+
   return { transporter, smtp: { ...smtp, username, password } };
 };
 
@@ -111,8 +142,9 @@ export const mailService = {
         message: `❌ SMTP Failed — ${err.message}`,
         lastCheck: new Date().toISOString(),
       };
-      logger.smtp(startupStatus.message, { error: err.message });
+      logger.smtp(startupStatus.message, { error: err.message, stack: err.stack });
       console.error(startupStatus.message);
+      console.error('Full error details:', err);
       return startupStatus;
     }
   },
@@ -133,6 +165,15 @@ export const mailService = {
       return { messageId: 'dev-mode', accepted: [to] };
     }
 
+    // Verify transporter before sending
+    try {
+      await withRetry(() => transporter.verify(), 'transporter.verify before send');
+      logger.smtp('Transporter verified before send', { to, subject });
+    } catch (err) {
+      logger.smtp('Transporter verification failed', { to, subject, error: err.message, stack: err.stack });
+      throw new Error(`SMTP verification failed: ${err.message}`);
+    }
+
     const fromEmail = smtp.fromEmail || smtp.fromName ? smtp.fromEmail : smtp.username;
     const from = smtp.fromName ? `"${smtp.fromName}" <${fromEmail || smtp.username}>` : fromEmail || smtp.username;
 
@@ -149,7 +190,7 @@ export const mailService = {
       'sendMail'
     );
 
-    logger.smtp('Email sent', { to, subject, messageId: result.messageId });
+    logger.smtp('Email sent successfully', { to, subject, messageId: result.messageId });
     return result;
   },
 

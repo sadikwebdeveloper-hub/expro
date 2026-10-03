@@ -18,9 +18,16 @@ const BASE = `http://127.0.0.1:${PORT}`;
 const BUNDLE = path.join(ROOT, 'tests', '.render-bundle.cjs');
 
 const ROUTES = [
-  { hash: '#/', mustContain: ['Legacy of Excellence', 'impact areas'] },
+  { hash: '#/', mustContain: ['Legacy of Excellence', 'impact areas'], verifyDirectorLinks: true },
   { hash: '#/companies', mustContain: ['Companies & subsidiaries'] },
   { hash: '#/products', mustContain: ['Products & services'] },
+  {
+    hash: '#/products',
+    maintenance: true,
+    minChars: 120,
+    mustContain: ['A little work behind the scenes.', 'Temporary maintenance for testing', 'Administrator sign in'],
+    mustNotContain: ['Products & services'],
+  },
   { hash: '#/media', mustContain: ['Media & gallery'] },
   { hash: '#/contact', mustContain: ['Send a message', 'Get in touch'] },
   { hash: '#/about/strategies', mustContain: ['Core Principles'] },
@@ -30,7 +37,7 @@ const ROUTES = [
   { hash: '#/about/coordinator', mustContain: ['Coordinator'] },
   { hash: '#/this-page-does-not-exist', mustContain: ['This page has moved on'] },
   // A compact form, so it legitimately has far less text than the public pages.
-  { hash: '#/admin/login', mustContain: ['Admin Login', 'Expro Group Management'], minChars: 60 },
+  { hash: '#/admin/login', maintenance: true, mustContain: ['Admin Login', 'Expro Group Management'], minChars: 60 },
 ];
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -47,7 +54,7 @@ const check = (name, fn) => {
   }
 };
 
-const makeDom = (hash) => {
+const makeDom = (hash, maintenance = false) => {
   const errors = [];
   const virtualConsole = new VirtualConsole();
   virtualConsole.on('jsdomError', (e) => errors.push(`jsdomError: ${e.message}`));
@@ -69,10 +76,25 @@ const makeDom = (hash) => {
 
   const { window } = dom;
 
-  // jsdom has no fetch; route relative URLs at the live server.
+  // jsdom has no fetch; route relative URLs at the live server. For the
+  // maintenance test, intercept public config so the test never edits data.json.
   window.fetch = (input, init) => {
-    const url = typeof input === 'string' ? new URL(input, BASE).href : input;
-    return fetch(url, init);
+    const url = new URL(typeof input === 'string' ? input : input.url, BASE);
+    if (maintenance && url.pathname === '/api/config') {
+      return Promise.resolve(new Response(JSON.stringify({
+        success: true,
+        message: 'config retrieved',
+        data: {
+          logoUrl: '',
+          websiteName: 'Expro Group',
+          maintenanceMode: true,
+          maintenanceMessage: 'Temporary maintenance for testing',
+          email: 'support@example.com',
+          supportEmail: 'support@example.com',
+        },
+      }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    }
+    return fetch(url.href, init);
   };
 
   // Reveal-on-scroll: report every element as visible immediately.
@@ -113,7 +135,7 @@ const run = async () => {
   console.log(`rendering against ${BASE}\n`);
 
   for (const route of ROUTES) {
-    const { dom, window, errors } = makeDom(route.hash);
+    const { dom, window, errors } = makeDom(route.hash, route.maintenance);
     try {
       window.eval(bundleSource);
     } catch (err) {
@@ -140,6 +162,25 @@ const run = async () => {
           text.toLowerCase().includes(needle.toLowerCase()),
           `expected to find "${needle}"`
         );
+      });
+    }
+
+    for (const needle of route.mustNotContain || []) {
+      check(`${route.hash} excludes "${needle}"`, () => {
+        assert.ok(
+          !text.toLowerCase().includes(needle.toLowerCase()),
+          `did not expect to find "${needle}"`
+        );
+      });
+    }
+
+    if (route.verifyDirectorLinks) {
+      check('homepage leadership cards link to the corresponding message pages', () => {
+        const paths = [...window.document.querySelectorAll('a[aria-label^="Read "]')]
+          .map((link) => link.getAttribute('href'));
+        assert.ok(paths.includes('#/about/chairman'), 'Chairman card should open Chairman’s message');
+        assert.ok(paths.includes('#/about/md'), 'Managing Director card should open the MD’s message');
+        assert.ok(paths.includes('#/about/coordinator'), 'Coordinator card should open Coordinator’s message');
       });
     }
 

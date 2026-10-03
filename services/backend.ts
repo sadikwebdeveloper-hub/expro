@@ -1,14 +1,9 @@
 import { Product, Achievement, NewsItem, Message, User, MediaItem, SiteConfig, HeroSlide, AboutContent, Company, Visitor, Partner, ServiceCard, Director, AppSettings, AuditLogEntry, AdminPermissions } from '../types';
 
-const getBaseUrl = () => {
-  if (typeof window !== 'undefined') {
-    const { port } = window.location;
-    if (port === '3000' || port === '5173') {
-      return 'http://localhost:5000/api';
-    }
-  }
-  return '/api';
-};
+// Keep browser requests same-origin so the Vite proxy (development) and the
+// Express app (production) can route API calls without exposing localhost to
+// the visitor's browser.
+const getBaseUrl = () => '/api';
 
 const API_URL = getBaseUrl();
 
@@ -365,6 +360,15 @@ class RealBackend {
 
   async updateSettings(settings: Partial<AppSettings>, smtpPassword?: string): Promise<AppSettings> {
     return await this.putJson(`${API_URL}/settings`, { ...settings, smtpPassword });
+  }
+
+  async setMaintenanceMode(enabled: boolean, message?: string): Promise<AppSettings> {
+    return await this.putJson(`${API_URL}/settings`, {
+      general: {
+        maintenanceMode: enabled,
+        ...(message !== undefined ? { maintenanceMessage: message } : {}),
+      },
+    });
   }
 
   async testSmtp(testEmail: string, smtp?: Partial<AppSettings['smtp']>, smtpPassword?: string): Promise<{ success: boolean; message: string }> {

@@ -9,6 +9,8 @@ import { Contact } from './pages/Contact';
 import { Companies } from './pages/Companies';
 import { Media } from './pages/Media';
 import { backend } from './services/backend';
+import { Maintenance } from './pages/Maintenance';
+import { SiteConfig } from './types';
 
 // About Sub-pages
 import { Strategies } from './pages/about/Strategies';
@@ -43,9 +45,32 @@ const ScrollToTop: React.FC = () => {
 };
 
 const PublicLayout = () => {
+  const [siteConfig, setSiteConfig] = React.useState<SiteConfig | null>(null);
+
   useEffect(() => {
-    backend.trackVisit();
+    let alive = true;
+    backend.getConfig().then((config) => {
+      if (!alive) return;
+      setSiteConfig(config);
+      if (!config.maintenanceMode) backend.trackVisit();
+    });
+    return () => { alive = false; };
   }, []);
+
+  // Resolve public site availability before mounting any page content to avoid
+  // briefly showing the site when maintenance mode is enabled.
+  if (!siteConfig) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-ink-950 text-ink-300" aria-busy="true">
+        <div className="flex items-center gap-3 text-sm">
+          <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-brand-400" aria-hidden />
+          Loading site…
+        </div>
+      </main>
+    );
+  }
+
+  if (siteConfig.maintenanceMode) return <Maintenance config={siteConfig} />;
 
   return (
     <div className="flex min-h-screen flex-col">

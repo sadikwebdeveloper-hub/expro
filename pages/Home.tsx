@@ -14,17 +14,6 @@ import {
 } from '../types';
 import { Reveal, SectionHeading, CountUp, CtaBand, SmartImage } from '../components/ui';
 
-/** Match board roles to the leadership message pages instead of the generic About overview. */
-const directorMessagePath = (position: string): string => {
-  const role = String(position || '').toLowerCase();
-  if (role.includes('chairman') || role.includes('chairperson') || role.includes('founder')) {
-    return '/about/chairman';
-  }
-  if (role.includes('coordinator')) return '/about/coordinator';
-  // Managing Director and other director roles use the director's message page.
-  return '/about/md';
-};
-
 /* ------------------------------------------------------------------ */
 /* Hero                                                                */
 /* ------------------------------------------------------------------ */
@@ -514,17 +503,22 @@ export const Home: React.FC = () => {
               <SectionHeading eyebrow="Leadership" title="Board of directors" />
             </Reveal>
 
-            <div className="mt-14 grid gap-10 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
               {directors.map((director, index) => (
                 <Reveal key={director.id} delay={index * 90}>
                   <figure className="group text-center">
-                    <div className="mx-auto h-52 w-52 overflow-hidden rounded-full ring-1 ring-ink-900/[0.08] ring-offset-4 ring-offset-white transition-all duration-500 group-hover:ring-brand-500/40">
+                    <div className="relative mx-auto h-52 w-52 overflow-hidden rounded-full ring-1 ring-ink-900/[0.08] ring-offset-4 ring-offset-white transition-all duration-500 group-hover:ring-brand-500/40">
                       <img
                         src={director.image || 'https://placehold.co/320x320/06192F/10B981?text=Expro'}
                         alt={director.name}
                         className="h-full w-full object-cover transition-transform duration-[900ms] group-hover:scale-110"
                         loading="lazy"
                       />
+                      <div className="absolute inset-0 grid place-items-center bg-ink-950/70 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                        <Link to="/about" className="rounded-full border border-white/70 px-5 py-2 text-[12.5px] font-semibold text-white transition hover:bg-white hover:text-ink-900">
+                          View profile
+                        </Link>
+                      </div>
                     </div>
                     <figcaption className="mt-6">
                       <h3 className="text-[17px] font-bold text-ink-900 transition-colors group-hover:text-brand-600">
@@ -533,14 +527,6 @@ export const Home: React.FC = () => {
                       <p className="mt-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-brand-600">
                         {director.position}
                       </p>
-                      <Link
-                        to={directorMessagePath(director.position)}
-                        aria-label={`Read ${director.position}'s message`}
-                        className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-ink-900/10 px-4 py-2 text-[13px] font-semibold text-ink-700 transition hover:border-brand-500 hover:bg-brand-50 hover:text-brand-700"
-                      >
-                        Read message
-                        <i className="fas fa-arrow-right text-[10px]" aria-hidden />
-                      </Link>
                     </figcaption>
                   </figure>
                 </Reveal>

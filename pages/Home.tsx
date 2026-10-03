@@ -1,463 +1,597 @@
-import React, { useEffect, useState, useRef, ReactNode } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { backend } from '../services/backend';
-import { Achievement, Product, NewsItem, HeroSlide, AboutContent, Company, SiteConfig, Partner, ServiceCard, Director } from '../types';
+import {
+  Achievement,
+  Product,
+  NewsItem,
+  HeroSlide,
+  AboutContent,
+  Company,
+  Partner,
+  ServiceCard,
+  Director,
+} from '../types';
 import { Preloader } from '../components/Preloader';
+import { Reveal, SectionHeading, CountUp, CtaBand, SmartImage } from '../components/ui';
 
-// --- Animated Reveal Component ---
-const RevealOnScroll: React.FC<{ children?: ReactNode }> = ({ children }) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setIsVisible(true);
-        observer.disconnect(); 
-      }
-    }, { threshold: 0.15 });
-
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div ref={ref} className={`transition-all duration-1000 transform ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20'}`}>
-      {children}
-    </div>
-  );
-};
-
-// --- Number Counter Component ---
-const NumberCounter = ({ target, duration = 2000 }: { target: string, duration?: number }) => {
-  const [count, setCount] = useState(0);
-  const [isVisible, setIsVisible] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  
-  const numMatch = target.match(/\d+/);
-  const endValue = numMatch ? parseInt(numMatch[0], 10) : 0;
-  const suffix = target.replace(/\d+/, '');
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setIsVisible(true);
-        observer.disconnect();
-      }
-    }, { threshold: 0.5 });
-
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!isVisible || endValue === 0) return;
-
-    let startTime: number | null = null;
-    const step = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      setCount(Math.floor(progress * endValue));
-      
-      if (progress < 1) {
-        window.requestAnimationFrame(step);
-      }
-    };
-    window.requestAnimationFrame(step);
-  }, [isVisible, endValue, duration]);
-
-  return <span ref={ref}>{count}{suffix}</span>;
-};
-
-// --- Hero Section ---
-const HeroSection = ({ slides }: { slides: HeroSlide[] }) => {
+/* ------------------------------------------------------------------ */
+/* Hero                                                                */
+/* ------------------------------------------------------------------ */
+const Hero: React.FC<{ slides: HeroSlide[] }> = ({ slides }) => {
   const [current, setCurrent] = useState(0);
+  const [paused, setPaused] = useState(false);
 
-  useEffect(() => {
-    if (slides.length === 0) return;
-    const timer = setInterval(() => {
-      setCurrent((prev) => (prev + 1) % slides.length);
-    }, 6000);
-    return () => clearInterval(timer);
+  const goTo = useCallback((index: number) => {
+    setCurrent((index + slides.length) % slides.length);
   }, [slides.length]);
 
+  useEffect(() => {
+    if (slides.length < 2 || paused) return;
+    const timer = window.setInterval(() => setCurrent((p) => (p + 1) % slides.length), 7000);
+    return () => window.clearInterval(timer);
+  }, [slides.length, paused]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') goTo(current + 1);
+      if (e.key === 'ArrowLeft') goTo(current - 1);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [current, goTo]);
+
   if (slides.length === 0) return null;
+  const slide = slides[current];
 
   return (
-    <div className="relative h-screen w-full overflow-hidden">
-      {slides.map((slide, index) => (
-        <div 
-          key={slide.id}
-          className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === current ? 'opacity-100' : 'opacity-0'}`}
+    <section
+      className="relative -mt-[76px] flex min-h-[100svh] items-center overflow-hidden bg-ink-950 pt-[76px]"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      aria-roledescription="carousel"
+      aria-label="Featured highlights"
+    >
+      {/* Slides */}
+      {slides.map((item, index) => (
+        <div
+          key={item.id}
+          className={`absolute inset-0 transition-opacity duration-[1200ms] ease-out ${
+            index === current ? 'opacity-100' : 'opacity-0'
+          }`}
+          aria-hidden={index !== current}
         >
-          <div 
-            className="absolute inset-0 bg-cover bg-center transition-transform duration-[10000ms] ease-linear transform scale-100 hover:scale-110"
-            style={{ backgroundImage: `url(${slide.image})` }}
-          ></div>
-          <div className="absolute inset-0 bg-black/50 bg-gradient-to-r from-black/90 via-black/40 to-transparent"></div>
-          <div className="absolute inset-0 flex flex-col justify-center px-6 container mx-auto text-white">
-            <RevealOnScroll>
-              <h5 className={`text-yellow-400 font-bold tracking-[0.2em] mb-4 text-lg uppercase`}>
-                {slide.subtitle}
-              </h5>
-              <h1 className={`text-5xl md:text-7xl font-serif font-bold mb-6 leading-tight max-w-4xl shadow-black drop-shadow-lg`}>
-                {slide.title}
-              </h1>
-              <p className={`text-xl md:text-2xl text-gray-200 max-w-2xl mb-10 leading-relaxed`}>
-                {slide.description}
-              </p>
-              <div>
-                <Link 
-                  to={slide.link} 
-                  className="bg-blue-600 text-white px-10 py-4 rounded-sm font-bold hover:bg-blue-700 transition-all shadow-xl hover:shadow-blue-500/30 uppercase tracking-widest text-sm inline-block"
-                >
-                  {slide.buttonText}
-                </Link>
-              </div>
-            </RevealOnScroll>
-          </div>
+          <div
+            className={`absolute inset-0 bg-cover bg-center ${index === current ? 'animate-[float_18s_ease-in-out_infinite]' : ''}`}
+            style={{ backgroundImage: `url(${item.image})`, transform: 'scale(1.06)' }}
+          />
         </div>
       ))}
-    </div>
+
+      {/* Overlays */}
+      <div className="absolute inset-0 bg-gradient-to-r from-ink-950 via-ink-950/80 to-ink-950/25" aria-hidden />
+      <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-transparent to-ink-950/60" aria-hidden />
+      <div className="absolute inset-0 bg-mesh-hero opacity-40 mix-blend-screen" aria-hidden />
+
+      <div className="container-x relative z-10 w-full py-24">
+        <div className="max-w-3xl">
+          <span
+            key={`eyebrow-${slide.id}`}
+            className="eyebrow-light animate-fade-in-up"
+            style={{ animationDelay: '80ms', opacity: 0 }}
+          >
+            {slide.subtitle}
+          </span>
+
+          <h1
+            key={`title-${slide.id}`}
+            className="mt-6 text-[2.6rem] font-extrabold leading-[1.06] text-white sm:text-6xl lg:text-[4.4rem] animate-fade-in-up text-balance"
+            style={{ animationDelay: '180ms', opacity: 0 }}
+          >
+            {slide.title}
+          </h1>
+
+          <p
+            key={`desc-${slide.id}`}
+            className="mt-7 max-w-xl text-[17px] leading-relaxed text-ink-200 sm:text-lg animate-fade-in-up text-pretty"
+            style={{ animationDelay: '300ms', opacity: 0 }}
+          >
+            {slide.description}
+          </p>
+
+          <div
+            key={`cta-${slide.id}`}
+            className="mt-10 flex flex-wrap items-center gap-4 animate-fade-in-up"
+            style={{ animationDelay: '420ms', opacity: 0 }}
+          >
+            <Link to={slide.link || '/about'} className="btn-primary">
+              {slide.buttonText || 'Discover More'} <i className="fas fa-arrow-right text-sm" aria-hidden />
+            </Link>
+            <Link to="/contact" className="btn-ghost-light">
+              Talk to Our Team
+            </Link>
+          </div>
+        </div>
+
+        {/* Controls */}
+        {slides.length > 1 && (
+          <div className="mt-16 flex items-center gap-5">
+            <div className="flex items-center gap-2.5">
+              {slides.map((item, index) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => goTo(index)}
+                  aria-label={`Go to slide ${index + 1}`}
+                  aria-current={index === current}
+                  className={`h-1.5 rounded-full transition-all duration-500 ${
+                    index === current ? 'w-11 bg-brand-400' : 'w-5 bg-white/25 hover:bg-white/50'
+                  }`}
+                />
+              ))}
+            </div>
+            <span className="text-[13px] font-semibold tabular-nums text-ink-300">
+              {String(current + 1).padStart(2, '0')}
+              <span className="mx-1 text-ink-600">/</span>
+              {String(slides.length).padStart(2, '0')}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Scroll cue */}
+      <div className="absolute bottom-8 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2 md:flex">
+        <span className="text-[10px] font-bold uppercase tracking-[0.28em] text-ink-400">Scroll</span>
+        <span className="h-10 w-px bg-gradient-to-b from-brand-400/80 to-transparent" aria-hidden />
+      </div>
+    </section>
   );
 };
 
+/* ------------------------------------------------------------------ */
+/* Service cards (overlapping the hero)                                */
+/* ------------------------------------------------------------------ */
+const ServiceStrip: React.FC<{ services: ServiceCard[] }> = ({ services }) => {
+  if (services.length === 0) return null;
+  return (
+    <section className="container-x relative z-20 -mt-20">
+      <div className="grid gap-5 md:grid-cols-3">
+        {services.slice(0, 3).map((service, index) => (
+          <Reveal key={service.id} delay={index * 110}>
+            <div className="card card-hover group h-full p-8">
+              <span className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-50 text-xl text-brand-600 transition-all duration-500 group-hover:scale-105 group-hover:bg-brand-500 group-hover:text-white">
+                <i className={`fas ${service.icon}`} aria-hidden />
+              </span>
+              <h3 className="mt-6 text-lg font-bold text-ink-900">{service.title}</h3>
+              <p className="mt-3 text-[14.5px] leading-relaxed text-ink-500">{service.description}</p>
+              <span className="mt-5 inline-flex items-center gap-2 text-[13px] font-semibold text-brand-600">
+                Learn more
+                <i className="fas fa-arrow-right text-[10px] transition-transform group-hover:translate-x-1" aria-hidden />
+              </span>
+            </div>
+          </Reveal>
+        ))}
+      </div>
+    </section>
+  );
+};
+
+/* ------------------------------------------------------------------ */
+/* Home                                                                */
+/* ------------------------------------------------------------------ */
 export const Home: React.FC = () => {
   const [loading, setLoading] = useState(true);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [news, setNews] = useState<NewsItem[]>([]);
   const [slides, setSlides] = useState<HeroSlide[]>([]);
   const [about, setAbout] = useState<AboutContent | null>(null);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [partners, setPartners] = useState<Partner[]>([]);
   const [services, setServices] = useState<ServiceCard[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [news, setNews] = useState<NewsItem[]>([]);
   const [directors, setDirectors] = useState<Director[]>([]);
+  const [partners, setPartners] = useState<Partner[]>([]);
 
   useEffect(() => {
-    // Parallel fetching for speed and efficiency
-    const loadData = async () => {
-      const p1 = backend.getSlides().then(setSlides);
-      const p2 = backend.getAboutContent().then(setAbout);
-      const p3 = backend.getCompanies().then(setCompanies);
-      const p4 = backend.getProducts().then(setProducts);
-      const p5 = backend.getNews().then(setNews);
-      const p6 = backend.getPartners().then(setPartners);
-      const p7 = backend.getServiceCards().then(setServices);
-      const p8 = backend.getAchievements().then(setAchievements);
-      const p9 = backend.getDirectors().then(setDirectors);
-      
-      await Promise.all([p1, p2, p3, p4, p5, p6, p7, p8, p9]);
-      
-      // Enforce a minimum display time for the branded animation (1.2 seconds)
-      setTimeout(() => {
-          setLoading(false);
-      }, 1200);
+    let alive = true;
+    const load = async () => {
+      const [s, a, sv, ach, c, p, n, d, pt] = await Promise.all([
+        backend.getSlides(),
+        backend.getAboutContent(),
+        backend.getServiceCards(),
+        backend.getAchievements(),
+        backend.getCompanies(),
+        backend.getProducts(),
+        backend.getNews(),
+        backend.getDirectors(),
+        backend.getPartners(),
+      ]);
+      if (!alive) return;
+      setSlides(s); setAbout(a); setServices(sv); setAchievements(ach);
+      setCompanies(c); setProducts(p); setNews(n); setDirectors(d); setPartners(pt);
+      window.setTimeout(() => alive && setLoading(false), 900);
     };
-    loadData();
+    load();
+    return () => { alive = false; };
   }, []);
 
-  if (loading) {
-      return <Preloader />;
-  }
+  if (loading) return <Preloader />;
+
+  const marqueeItems = partners.length > 0 ? partners : [];
 
   return (
-    <div className="overflow-x-hidden animate-fade-in-up">
-      {/* 1. Hero Section */}
-      <HeroSection slides={slides} />
+    <div className="overflow-x-hidden">
+      <Hero slides={slides} />
 
-      {/* 2. Feature Cards Section (Overlapping) */}
-      {services.length > 0 && (
-         <section className="relative -mt-24 z-20 container mx-auto px-4 mb-20">
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                 {services.slice(0, 3).map((s, index) => (
-                   <RevealOnScroll key={s.id}>
-                     <div className={`bg-white p-8 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-b-4 border-blue-600 h-full`}>
-                         <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-3xl mb-6">
-                             <i className={`fas ${s.icon}`}></i>
-                         </div>
-                         <h3 className="text-xl font-bold mb-3 text-gray-900">{s.title}</h3>
-                         <p className="text-gray-600 leading-relaxed">{s.description}</p>
-                     </div>
-                   </RevealOnScroll>
-                 ))}
-             </div>
-         </section>
-      )}
+      <ServiceStrip services={services} />
 
-      {/* 3. Who We Are Section */}
+      {/* ---------- Who we are ---------- */}
       {about && (
-        <section className="py-20 bg-white">
-             <div className="container mx-auto px-4">
-                <div className="grid md:grid-cols-2 gap-16 items-center">
-                   <RevealOnScroll>
-                     <div className="relative group">
-                        <div className="absolute top-0 left-0 w-3/4 h-3/4 border-8 border-blue-50 rounded-3xl -z-10 transform -translate-x-6 -translate-y-6 transition-transform group-hover:-translate-x-8 group-hover:-translate-y-8"></div>
-                        <img 
-                           src="https://images.unsplash.com/photo-1557426272-fc759fdf7a8d?auto=format&fit=crop&q=80" 
-                           alt="About Us" 
-                           className="rounded-xl shadow-2xl w-full"
-                        />
-                        <div className="absolute bottom-10 right-10 bg-blue-600 text-white p-6 rounded-lg shadow-xl hidden md:block animate-float">
-                            <p className="text-3xl font-bold">25+</p>
-                            <p className="text-sm">Years of Experience</p>
-                        </div>
-                     </div>
-                   </RevealOnScroll>
-
-                   <RevealOnScroll>
-                     <div>
-                        <h6 className="text-blue-600 font-bold uppercase tracking-widest mb-4">Who We Are</h6>
-                        <h2 className="text-4xl font-bold mb-6 font-serif text-gray-900">Building a Sustainable Future Together</h2>
-                        <p className="text-gray-600 text-lg leading-relaxed mb-6 text-justify">
-                           {about.introText ? about.introText.substring(0, 400) : "We are committed to excellence..."}...
-                        </p>
-                        <div className="space-y-4 mb-8">
-                            <div className="flex items-center">
-                               <i className="fas fa-check-circle text-green-500 text-xl mr-3"></i>
-                               <span className="font-bold text-gray-700">Commitment to Quality</span>
-                            </div>
-                            <div className="flex items-center">
-                               <i className="fas fa-check-circle text-green-500 text-xl mr-3"></i>
-                               <span className="font-bold text-gray-700">Sustainable Practices</span>
-                            </div>
-                            <div className="flex items-center">
-                               <i className="fas fa-check-circle text-green-500 text-xl mr-3"></i>
-                               <span className="font-bold text-gray-700">Global Standards</span>
-                            </div>
-                        </div>
-                        <Link to="/about" className="bg-gray-900 text-white px-8 py-3 rounded-md font-bold hover:bg-blue-700 transition shadow-lg">Read More About Us</Link>
-                     </div>
-                   </RevealOnScroll>
-                </div>
-             </div>
-        </section>
-      )}
-
-      {/* 4. Chairman's Message */}
-      {about && (
-        <section className="py-24 bg-gray-50 relative overflow-hidden">
-           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-50 -mr-20 -mt-20"></div>
-           <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-100 rounded-full mix-blend-multiply filter blur-3xl opacity-50 -ml-20 -mb-20"></div>
-
-           <div className="container mx-auto px-4 relative z-10">
-              <RevealOnScroll>
-                <div className="grid md:grid-cols-12 gap-8 items-center bg-white rounded-3xl p-8 md:p-12 shadow-2xl border-t-8 border-blue-600">
-                    <div className="md:col-span-4 flex flex-col items-center text-center">
-                        <div className="w-56 h-56 rounded-full overflow-hidden border-4 border-gray-100 shadow-xl mb-6">
-                            <img 
-                                src={about.chairmanImage || "https://nexalite-org.github.io/storage/founder.png"} 
-                                alt={about.chairmanName} 
-                                className="w-full h-full object-cover"
-                            />
-                        </div>
-                        <h3 className="text-2xl font-bold font-serif text-gray-900">{about.chairmanName}</h3>
-                        <p className="text-blue-600 font-bold uppercase text-xs tracking-widest mt-1">Founder & Chairman</p>
-                    </div>
-                    <div className="md:col-span-8">
-                        <i className="fas fa-quote-left text-5xl text-blue-100 mb-6 block"></i>
-                        <h2 className="text-3xl font-bold mb-6 font-serif text-gray-800">A Message from Leadership</h2>
-                        <div className="text-gray-600 leading-relaxed text-lg text-justify italic">
-                            "{about.chairmanMessage}"
-                        </div>
-                        <div className="mt-8">
-                            <Link to="/about/chairman" className="text-blue-600 font-bold hover:underline">Read Full Message <i className="fas fa-arrow-right ml-1"></i></Link>
-                        </div>
-                    </div>
-                </div>
-              </RevealOnScroll>
-           </div>
-        </section>
-      )}
-
-      {/* 5. Statistics / Counter Section */}
-      {achievements.length > 0 && (
-        <section className="py-24 bg-blue-900 text-white relative bg-fixed bg-cover bg-center" style={{backgroundImage: "url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80')"}}>
-          <div className="absolute inset-0 bg-blue-900/90"></div>
-          <div className="container mx-auto px-4 relative z-10">
-            <RevealOnScroll>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-                {achievements.map(ach => (
-                  <div key={ach.id} className="p-6 group hover:bg-white/5 rounded-xl transition duration-300">
-                      <div className="w-20 h-20 mx-auto bg-white/10 rounded-full flex items-center justify-center mb-6 backdrop-blur-sm border border-white/20 group-hover:bg-white/20 transition">
-                        {ach.image ? <img src={ach.image} className="w-10 h-10 object-contain filter invert" /> : <i className="fas fa-trophy text-3xl text-yellow-400"></i>}
-                      </div>
-                      <h3 className="text-4xl md:text-5xl font-bold mb-2 text-white">
-                        <NumberCounter target={ach.title ? ach.title.split(' ')[0] : '0'} />
-                      </h3>
-                      <p className="text-blue-200 uppercase tracking-wider text-xs font-bold">{ach.title ? ach.title.split(' ').slice(1).join(' ') : ''}</p>
+        <section className="py-24 sm:py-28">
+          <div className="container-x">
+            <div className="grid items-center gap-14 lg:grid-cols-2 lg:gap-20">
+              <Reveal>
+                <div className="relative">
+                  <div className="absolute -left-5 -top-5 h-40 w-40 rounded-3xl border border-brand-500/25" aria-hidden />
+                  <SmartImage
+                    src="https://images.unsplash.com/photo-1557426272-fc759fdf7a8d?auto=format&fit=crop&q=80&w=1200"
+                    alt="Expro Group operations"
+                    className="relative aspect-[4/3] rounded-3xl shadow-lift"
+                    imgClassName="h-full w-full object-cover"
+                  />
+                  <div className="absolute -bottom-8 -right-4 rounded-2xl bg-ink-900 px-7 py-6 text-white shadow-lift sm:-right-8">
+                    <p className="text-3xl font-extrabold text-brand-400">25+</p>
+                    <p className="mt-1 text-[12.5px] uppercase tracking-[0.16em] text-ink-300">Years of Excellence</p>
                   </div>
-                ))}
-              </div>
-            </RevealOnScroll>
-          </div>
-        </section>
-      )}
+                </div>
+              </Reveal>
 
-      {/* 6. Subsidiaries / Companies */}
-      <section className="py-24 bg-white relative overflow-hidden">
-        <div className="container mx-auto px-4 relative z-10">
-          <RevealOnScroll>
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <h6 className="text-blue-600 tracking-widest uppercase mb-2 text-sm font-bold">Our Ecosystem</h6>
-              <h2 className="text-4xl font-bold mb-4 font-serif">Our Companies & Subsidiaries</h2>
-              <p className="text-gray-500">A diverse portfolio driving sustainable national progress.</p>
+              <Reveal delay={120}>
+                <span className="eyebrow">Who We Are</span>
+                <h2 className="mt-5 text-3xl font-bold leading-[1.15] text-ink-900 sm:text-[2.6rem] text-balance">
+                  Building a sustainable future, together
+                </h2>
+                <p className="mt-6 text-[16px] leading-relaxed text-ink-500 text-pretty">
+                  {about.introText
+                    ? `${about.introText.split('\n')[0].slice(0, 320)}${about.introText.length > 320 ? '…' : ''}`
+                    : 'We are committed to excellence across every sector we touch.'}
+                </p>
+
+                <ul className="mt-8 space-y-4">
+                  {['Commitment to quality', 'Sustainable by design', 'Held to global standards'].map((point, index) => (
+                    <li key={point} className="flex items-center gap-3.5">
+                      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand-500/12 text-[11px] text-brand-600">
+                        <i className="fas fa-check" aria-hidden />
+                      </span>
+                      <span className="text-[15px] font-semibold text-ink-700">{point}</span>
+                      {index === 0 && <span className="ml-auto hidden sm:block" aria-hidden />}
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-10 flex flex-wrap gap-4">
+                  <Link to="/about/strategies" className="btn-dark">
+                    Our Approach <i className="fas fa-arrow-right text-sm" aria-hidden />
+                  </Link>
+                  <Link to="/about/vision" className="btn-outline">
+                    Vision &amp; Mission
+                  </Link>
+                </div>
+              </Reveal>
             </div>
-          </RevealOnScroll>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {companies.slice(0, 6).map(comp => (
-              <RevealOnScroll key={comp.id}>
-                <div className="bg-gray-50 p-8 rounded-xl shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border border-gray-100 group h-full">
-                  <div className="w-16 h-16 bg-white text-blue-600 rounded-lg flex items-center justify-center text-3xl mb-6 shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                     {comp.image ? (
-                        <img src={comp.image} className="w-full h-full object-contain p-2" alt={comp.name} />
-                     ) : (
-                        <i className={`fas ${comp.icon}`}></i>
-                     )}
-                  </div>
-                  <h3 className="text-xl font-bold mb-3 text-gray-800">{comp.name}</h3>
-                  <p className="text-gray-500 text-sm leading-relaxed">{comp.description}</p>
-                </div>
-              </RevealOnScroll>
-            ))}
           </div>
-          <div className="text-center mt-12">
-             <Link to="/companies" className="inline-block border-2 border-blue-600 text-blue-600 font-bold py-3 px-8 rounded-full hover:bg-blue-600 hover:text-white transition">View All Subsidiaries</Link>
-          </div>
-        </div>
-      </section>
-
-      {/* 7. Featured Products */}
-      {products.length > 0 && (
-            <section className="py-24 bg-gray-50">
-               <div className="container mx-auto px-4">
-                  <RevealOnScroll>
-                    <div className="flex flex-col md:flex-row justify-between items-end mb-12">
-                       <div className="mb-4 md:mb-0">
-                          <h6 className="text-blue-600 tracking-widest uppercase mb-2 text-sm font-bold">What We Offer</h6>
-                          <h2 className="text-4xl font-bold font-serif">Featured Products</h2>
-                       </div>
-                       <Link to="/products" className="text-gray-500 hover:text-blue-600 font-bold border-b-2 border-transparent hover:border-blue-600 pb-1 transition">View Catalog <i className="fas fa-arrow-right ml-1"></i></Link>
-                    </div>
-                  </RevealOnScroll>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                     {products.slice(0, 3).map(product => (
-                        <RevealOnScroll key={product.id}>
-                          <div className="group relative overflow-hidden rounded-xl shadow-lg h-96 cursor-pointer">
-                             <img src={product.image} alt={product.name} className="w-full h-full object-cover transform group-hover:scale-110 transition duration-700" />
-                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-90"></div>
-                             <div className="absolute bottom-0 left-0 p-8 w-full transform translate-y-2 group-hover:translate-y-0 transition">
-                                <span className="text-yellow-400 text-xs font-bold uppercase tracking-wider mb-2 block">{product.category}</span>
-                                <h3 className="text-white text-2xl font-bold mb-2">{product.name}</h3>
-                                <p className="text-gray-300 text-sm opacity-0 group-hover:opacity-100 transition duration-500">Premium quality product from Expro Group.</p>
-                             </div>
-                          </div>
-                        </RevealOnScroll>
-                     ))}
-                  </div>
-               </div>
-            </section>
+        </section>
       )}
 
-      {/* 8. Latest News */}
-      <section className="py-24 bg-white">
-          <div className="container mx-auto px-4">
-            <RevealOnScroll>
-              <div className="text-center mb-16">
-                  <h6 className="text-blue-600 tracking-widest uppercase mb-2 text-sm font-bold">Press Room</h6>
-                  <h2 className="text-4xl font-bold font-serif">Latest News & Events</h2>
-              </div>
-            </RevealOnScroll>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {news.slice(0, 3).map(item => (
-                <RevealOnScroll key={item.id}>
-                  <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 group border border-gray-100 flex flex-col h-full">
-                    <div className="overflow-hidden h-56 relative">
-                      <img src={item.image} alt={item.title} className="w-full h-full object-cover transform group-hover:scale-110 transition duration-500" />
-                      <div className="absolute top-4 right-4 bg-white/90 backdrop-blur text-gray-900 px-3 py-1 text-xs font-bold rounded shadow">
-                        {item.date}
-                      </div>
+      {/* ---------- Chairman ---------- */}
+      {about && (
+        <section className="relative overflow-hidden bg-ink-50/70 py-24 sm:py-28">
+          <div className="absolute inset-0 section-grid opacity-60" aria-hidden />
+          <div className="container-x relative">
+            <Reveal>
+              <div className="overflow-hidden rounded-[2rem] border border-ink-900/[0.07] bg-white shadow-lift">
+                <div className="grid lg:grid-cols-12">
+                  <div className="relative flex flex-col items-center justify-center gap-5 bg-ink-950 px-8 py-14 text-center lg:col-span-4">
+                    <div className="absolute inset-0 bg-mesh-hero opacity-60" aria-hidden />
+                    <div className="relative h-44 w-44 overflow-hidden rounded-full ring-4 ring-brand-500/30">
+                      <img
+                        src={about.chairmanImage || 'https://nexalite-org.github.io/storage/founder.png'}
+                        alt={about.chairmanName}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
                     </div>
-                    <div className="p-8 flex-1 flex flex-col">
-                      <h3 className="text-xl font-bold mb-3 group-hover:text-blue-600 transition line-clamp-2">{item.title}</h3>
-                      <p className="text-gray-600 text-sm mb-6 leading-relaxed line-clamp-3 flex-grow">{item.content}</p>
-                      <Link to="/media" className="text-blue-600 font-bold text-sm uppercase tracking-wider hover:underline mt-auto">Read Full Story <i className="fas fa-arrow-right ml-1 text-xs"></i></Link>
+                    <div className="relative">
+                      <h3 className="text-xl font-bold text-white">{about.chairmanName}</h3>
+                      <p className="mt-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-brand-400">
+                        Founder &amp; Chairman
+                      </p>
                     </div>
                   </div>
-                </RevealOnScroll>
+
+                  <div className="px-8 py-14 sm:px-12 lg:col-span-8">
+                    <i className="fas fa-quote-left text-3xl text-brand-500/25" aria-hidden />
+                    <h2 className="mt-5 text-2xl font-bold text-ink-900 sm:text-[2rem]">A message from our leadership</h2>
+                    <p className="mt-6 text-[16.5px] italic leading-relaxed text-ink-600 text-pretty">
+                      “{about.chairmanMessage}”
+                    </p>
+                    <Link
+                      to="/about/chairman"
+                      className="group mt-8 inline-flex items-center gap-2 text-[14px] font-bold text-brand-600"
+                    >
+                      Read the full message
+                      <i className="fas fa-arrow-right text-[11px] transition-transform group-hover:translate-x-1" aria-hidden />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+      )}
+
+      {/* ---------- Impact areas ---------- */}
+      {services.length > 0 && (
+        <section className="py-24 sm:py-28">
+          <div className="container-x">
+            <Reveal>
+              <SectionHeading
+                eyebrow="What We Do"
+                title="Our impact areas"
+                subtitle="Programmes and business lines where Expro Group creates measurable, lasting value."
+              />
+            </Reveal>
+
+            <div className="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {services.map((service, index) => (
+                <Reveal key={service.id} delay={index * 90}>
+                  <article className="card card-hover group relative h-full overflow-hidden p-8">
+                    <span className="absolute right-6 top-6 text-5xl font-extrabold text-ink-900/[0.04]" aria-hidden>
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <span className="grid h-14 w-14 place-items-center rounded-2xl bg-ink-900 text-lg text-brand-400 transition-colors duration-500 group-hover:bg-brand-500 group-hover:text-white">
+                      <i className={`fas ${service.icon}`} aria-hidden />
+                    </span>
+                    <h3 className="mt-6 text-lg font-bold text-ink-900">{service.title}</h3>
+                    <p className="mt-3 text-[14.5px] leading-relaxed text-ink-500">{service.description}</p>
+                  </article>
+                </Reveal>
               ))}
             </div>
           </div>
-      </section>
-
-      {/* 9. Partners Section */}
-      {partners.length > 0 && (
-          <section className="py-16 bg-gray-50 border-t border-gray-200 overflow-hidden">
-            <RevealOnScroll>
-              <div className="container mx-auto px-4 mb-10 text-center">
-                  <h6 className="text-blue-600 tracking-widest uppercase mb-2 text-xs font-bold">Trusted Network</h6>
-                  <h2 className="text-2xl font-bold font-serif text-gray-400">Our Partners & Clients</h2>
-              </div>
-              <div className="flex flex-wrap justify-center items-center gap-16 container mx-auto px-4 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition duration-500">
-                  {partners.map(p => (
-                      <div key={p.id}>
-                          <img src={p.logo} alt={p.name} className="h-16 w-auto object-contain" title={p.name} />
-                      </div>
-                  ))}
-              </div>
-            </RevealOnScroll>
-          </section>
+        </section>
       )}
 
-      {/* 10. Board of Directors */}
-      {directors.length > 0 && (
-         <section className="py-24 bg-white border-t border-gray-100">
-            <div className="container mx-auto px-4">
-                <RevealOnScroll>
-                  <div className="text-center mb-16">
-                      <h6 className="text-blue-600 tracking-widest uppercase mb-2 text-sm font-bold">Leadership</h6>
-                      <h2 className="text-4xl font-bold font-serif">Board of Directors</h2>
-                      <div className="w-24 h-1 bg-blue-600 mx-auto mt-4"></div>
-                  </div>
-                </RevealOnScroll>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
-                    {directors.map(dir => (
-                      <RevealOnScroll key={dir.id}>
-                        <div className="text-center group">
-                            <div className="w-56 h-56 mx-auto rounded-full overflow-hidden border-8 border-gray-50 shadow-xl mb-8 relative">
-                                <img src={dir.image || "https://placehold.co/200x200?text=Leader"} alt={dir.name} className="w-full h-full object-cover transition duration-700 transform group-hover:scale-110" />
-                                <div className="absolute inset-0 bg-blue-900/40 opacity-0 group-hover:opacity-100 transition duration-300 flex items-center justify-center">
-                                   <Link to="/about" className="text-white border border-white px-4 py-2 rounded-full text-sm hover:bg-white hover:text-blue-900 transition">View Profile</Link>
-                                </div>
-                            </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-1 group-hover:text-blue-600 transition">{dir.name}</h3>
-                            <p className="text-blue-600 text-sm font-bold uppercase tracking-wider">{dir.position}</p>
-                        </div>
-                      </RevealOnScroll>
-                    ))}
-                </div>
+      {/* ---------- Statistics ---------- */}
+      {achievements.length > 0 && (
+        <section className="relative overflow-hidden bg-ink-950 py-24">
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-15"
+            style={{ backgroundImage: "url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=1600')" }}
+            aria-hidden
+          />
+          <div className="absolute inset-0 bg-mesh-hero opacity-70" aria-hidden />
+          <div className="container-x relative">
+            <Reveal>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-12 lg:grid-cols-4">
+                {achievements.map((achievement) => {
+                  const raw = achievement.title || '';
+                  const valuePart = raw.match(/[\d,]+\s*\S*/)?.[0] ?? raw;
+                  const labelPart = raw.replace(valuePart, '').trim();
+                  return (
+                    <div key={achievement.id} className="text-center">
+                      <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl border border-white/12 bg-white/[0.06] backdrop-blur">
+                        {achievement.image ? (
+                          <img src={achievement.image} alt="" className="h-7 w-7 object-contain brightness-0 invert" />
+                        ) : (
+                          <i className="fas fa-trophy text-xl text-gold-400" aria-hidden />
+                        )}
+                      </span>
+                      <p className="mt-6 text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
+                        <CountUp target={valuePart} />
+                      </p>
+                      <p className="mt-2 text-[11.5px] font-bold uppercase tracking-[0.2em] text-ink-300">
+                        {labelPart || 'Milestones'}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </Reveal>
+          </div>
+        </section>
+      )}
+
+      {/* ---------- Companies ---------- */}
+      <section className="py-24 sm:py-28">
+        <div className="container-x">
+          <Reveal>
+            <SectionHeading
+              eyebrow="Our Ecosystem"
+              title="Companies & subsidiaries"
+              subtitle="A diversified portfolio working toward one goal: sustainable national progress."
+            />
+          </Reveal>
+
+          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {companies.slice(0, 6).map((company, index) => (
+              <Reveal key={company.id} delay={index * 80}>
+                <article className="card card-hover group h-full p-8">
+                  <span className="grid h-14 w-14 place-items-center overflow-hidden rounded-2xl bg-ink-50 text-xl text-ink-600 transition-colors duration-500 group-hover:bg-brand-500 group-hover:text-white">
+                    {company.image ? (
+                      <img src={company.image} alt="" className="h-9 w-9 object-contain" />
+                    ) : (
+                      <i className={`fas ${company.icon || 'fa-building'}`} aria-hidden />
+                    )}
+                  </span>
+                  <h3 className="mt-6 text-[17px] font-bold text-ink-900 transition-colors group-hover:text-brand-600">
+                    {company.name}
+                  </h3>
+                  <p className="mt-3 text-[14px] leading-relaxed text-ink-500">{company.description}</p>
+                </article>
+              </Reveal>
+            ))}
+          </div>
+
+          <Reveal>
+            <div className="mt-12 text-center">
+              <Link to="/companies" className="btn-outline">
+                View all subsidiaries <i className="fas fa-arrow-right text-sm" aria-hidden />
+              </Link>
             </div>
-         </section>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ---------- Products ---------- */}
+      {products.length > 0 && (
+        <section className="bg-ink-50/70 py-24 sm:py-28">
+          <div className="container-x">
+            <Reveal>
+              <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end">
+                <SectionHeading
+                  align="left"
+                  eyebrow="What We Offer"
+                  title="Featured products"
+                />
+                <Link to="/products" className="group inline-flex shrink-0 items-center gap-2 text-[14px] font-bold text-brand-600">
+                  View full catalogue
+                  <i className="fas fa-arrow-right text-[11px] transition-transform group-hover:translate-x-1" aria-hidden />
+                </Link>
+              </div>
+            </Reveal>
+
+            <div className="mt-12 grid gap-6 md:grid-cols-3">
+              {products.slice(0, 3).map((product, index) => (
+                <Reveal key={product.id} delay={index * 90}>
+                  <article className="group relative h-[26rem] overflow-hidden rounded-2xl shadow-soft">
+                    <SmartImage
+                      src={product.image}
+                      alt={product.name}
+                      className="absolute inset-0"
+                      imgClassName="h-full w-full object-cover transition-transform duration-[1100ms] group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/25 to-transparent" aria-hidden />
+                    <div className="absolute inset-x-0 bottom-0 p-7">
+                      <span className="inline-block rounded-full bg-brand-500/90 px-3 py-1 text-[10.5px] font-bold uppercase tracking-[0.14em] text-white">
+                        {product.category}
+                      </span>
+                      <h3 className="mt-3.5 text-xl font-bold text-white">{product.name}</h3>
+                      <p className="mt-2 max-h-0 overflow-hidden text-[13.5px] leading-relaxed text-ink-200 opacity-0 transition-all duration-500 group-hover:max-h-24 group-hover:opacity-100">
+                        Premium quality, manufactured to international standards by Expro Group.
+                      </p>
+                    </div>
+                  </article>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
       )}
 
-      {/* 11. CTA / Contact Map Section */}
-      <section className="py-20 bg-blue-900 text-white relative overflow-hidden">
-         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/world-map.png')] opacity-10"></div>
-         <div className="container mx-auto px-4 relative z-10 text-center">
-            <RevealOnScroll>
-              <h2 className="text-4xl font-bold font-serif mb-6">Ready to Collaborate?</h2>
-              <p className="text-xl text-blue-100 max-w-2xl mx-auto mb-10">We are always looking for new opportunities and partnerships to create sustainable value.</p>
-              <div className="flex justify-center gap-6">
-                  <Link to="/contact" className="bg-white text-blue-900 px-10 py-4 rounded-full font-bold hover:bg-gray-100 transition shadow-xl">Contact Us</Link>
-                  <Link to="/companies" className="border-2 border-white text-white px-10 py-4 rounded-full font-bold hover:bg-white hover:text-blue-900 transition shadow-xl">Our Portfolio</Link>
-              </div>
-            </RevealOnScroll>
-         </div>
-      </section>
+      {/* ---------- Leadership ---------- */}
+      {directors.length > 0 && (
+        <section className="py-24 sm:py-28">
+          <div className="container-x">
+            <Reveal>
+              <SectionHeading eyebrow="Leadership" title="Board of directors" />
+            </Reveal>
+
+            <div className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+              {directors.map((director, index) => (
+                <Reveal key={director.id} delay={index * 90}>
+                  <figure className="group text-center">
+                    <div className="relative mx-auto h-52 w-52 overflow-hidden rounded-full ring-1 ring-ink-900/[0.08] ring-offset-4 ring-offset-white transition-all duration-500 group-hover:ring-brand-500/40">
+                      <img
+                        src={director.image || 'https://placehold.co/320x320/06192F/10B981?text=Expro'}
+                        alt={director.name}
+                        className="h-full w-full object-cover transition-transform duration-[900ms] group-hover:scale-110"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 grid place-items-center bg-ink-950/70 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                        <Link to="/about" className="rounded-full border border-white/70 px-5 py-2 text-[12.5px] font-semibold text-white transition hover:bg-white hover:text-ink-900">
+                          View profile
+                        </Link>
+                      </div>
+                    </div>
+                    <figcaption className="mt-6">
+                      <h3 className="text-[17px] font-bold text-ink-900 transition-colors group-hover:text-brand-600">
+                        {director.name}
+                      </h3>
+                      <p className="mt-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-brand-600">
+                        {director.position}
+                      </p>
+                    </figcaption>
+                  </figure>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ---------- News ---------- */}
+      {news.length > 0 && (
+        <section className="bg-ink-50/70 py-24 sm:py-28">
+          <div className="container-x">
+            <Reveal>
+              <SectionHeading eyebrow="Press Room" title="Latest news & events" />
+            </Reveal>
+
+            <div className="mt-14 grid gap-6 md:grid-cols-3">
+              {news.slice(0, 3).map((item, index) => (
+                <Reveal key={item.id} delay={index * 90}>
+                  <article className="card card-hover group flex h-full flex-col overflow-hidden">
+                    <SmartImage
+                      src={item.image}
+                      alt={item.title}
+                      className="relative h-52 shrink-0"
+                      imgClassName="h-full w-full object-cover transition-transform duration-[900ms] group-hover:scale-105"
+                    />
+                    <div className="flex flex-1 flex-col p-7">
+                      <time className="text-[11.5px] font-bold uppercase tracking-[0.16em] text-brand-600">{item.date}</time>
+                      <h3 className="mt-3 text-[17px] font-bold leading-snug text-ink-900 transition-colors group-hover:text-brand-600">
+                        {item.title}
+                      </h3>
+                      <p className="mt-3 line-clamp-3 flex-1 text-[14px] leading-relaxed text-ink-500">{item.content}</p>
+                      <Link to="/media" className="group/link mt-5 inline-flex items-center gap-2 text-[13px] font-bold text-brand-600">
+                        Read the story
+                        <i className="fas fa-arrow-right text-[10px] transition-transform group-hover/link:translate-x-1" aria-hidden />
+                      </Link>
+                    </div>
+                  </article>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ---------- Partners marquee ---------- */}
+      {marqueeItems.length > 0 && (
+        <section className="border-y border-ink-900/[0.06] py-14">
+          <div className="container-x">
+            <p className="text-center text-[11px] font-bold uppercase tracking-[0.24em] text-ink-400">
+              Trusted by partners &amp; clients
+            </p>
+          </div>
+          <div className="mask-fade-x mt-9 overflow-hidden">
+            <div className="flex w-max animate-marquee items-center gap-16">
+              {[...marqueeItems, ...marqueeItems].map((partner, index) => (
+                <img
+                  key={`${partner.id}-${index}`}
+                  src={partner.logo}
+                  alt={partner.name}
+                  title={partner.name}
+                  className="h-11 w-auto object-contain opacity-45 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0"
+                  loading="lazy"
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <CtaBand />
     </div>
   );
 };

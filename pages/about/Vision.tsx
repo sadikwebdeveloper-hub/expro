@@ -1,56 +1,110 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { backend } from '../../services/backend';
 import { AboutContent } from '../../types';
+import { Preloader } from '../../components/Preloader';
+import { PageHero, Reveal, CtaBand, SmartImage } from '../../components/ui';
 
 export const Vision: React.FC = () => {
   const [content, setContent] = useState<AboutContent | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    backend.getAboutContent().then(setContent);
+    let alive = true;
+    backend.getAboutContent().then((c) => {
+      if (!alive) return;
+      setContent(c);
+      window.setTimeout(() => alive && setLoading(false), 500);
+    });
+    return () => { alive = false; };
   }, []);
 
+  if (loading) return <Preloader />;
+
+  const mission = content?.mission?.filter(Boolean) ?? [];
+
   return (
-    <div className="animate-fade-in-up">
-      <div className="relative h-[400px] flex items-center justify-center bg-gray-900 text-white" style={{backgroundImage: "url('https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80')", backgroundAttachment: 'fixed', backgroundSize: 'cover'}}>
-        <div className="absolute inset-0 bg-black/60"></div>
-        <div className="relative z-10 text-center px-4">
-          <h1 className="text-5xl font-bold mb-4 font-serif">Vision & Mission</h1>
-          <p className="text-xl text-gray-200 max-w-2xl mx-auto">Defining our purpose and future aspirations.</p>
+    <div>
+      <PageHero
+        eyebrow="About Us"
+        title="Vision & mission"
+        subtitle="The purpose that guides every company in the Expro Group portfolio."
+        image="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=1600"
+        breadcrumb={[{ label: 'Home', to: '/' }, { label: 'Vision & Mission' }]}
+      />
+
+      {/* Vision */}
+      <section className="py-20 sm:py-24">
+        <div className="container-x">
+          <div className="grid items-center gap-14 lg:grid-cols-2 lg:gap-20">
+            <Reveal>
+              <span className="grid h-16 w-16 place-items-center rounded-2xl bg-brand-50 text-2xl text-brand-600">
+                <i className="fas fa-eye" aria-hidden />
+              </span>
+              <h2 className="mt-7 text-3xl font-bold text-ink-900 sm:text-[2.5rem]">Our vision</h2>
+              <blockquote className="mt-7 border-l-2 border-brand-500 pl-7">
+                <p className="text-xl italic leading-relaxed text-ink-600 sm:text-[1.4rem] text-pretty">
+                  “{content?.vision}”
+                </p>
+              </blockquote>
+              <Link to="/about/chairman" className="btn-dark mt-10">
+                Chairman’s Message <i className="fas fa-arrow-right text-sm" aria-hidden />
+              </Link>
+            </Reveal>
+
+            <Reveal delay={120}>
+              <div className="relative">
+                <div className="absolute -right-5 -top-5 h-40 w-40 rounded-3xl border border-brand-500/25" aria-hidden />
+                <SmartImage
+                  src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=80&w=1200"
+                  alt="Expro Group team planning"
+                  className="relative aspect-[4/3] rounded-3xl shadow-lift"
+                  imgClassName="h-full w-full object-cover"
+                />
+              </div>
+            </Reveal>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div className="container mx-auto px-4 py-20">
-         <div className="grid md:grid-cols-2 gap-16 items-center mb-20">
-            <div className="order-2 md:order-1">
-               <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-4xl mb-6">
-                  <i className="fas fa-eye"></i>
-               </div>
-               <h2 className="text-4xl font-bold mb-6 font-serif">Our Vision</h2>
-               <p className="text-xl text-gray-600 leading-relaxed italic border-l-4 border-blue-600 pl-6">
-                 "{content?.vision}"
-               </p>
+      {/* Mission */}
+      <section className="relative overflow-hidden bg-ink-950 py-20 sm:py-24">
+        <div className="absolute inset-0 bg-mesh-hero opacity-70" aria-hidden />
+        <div className="container-x relative">
+          <Reveal>
+            <div className="mx-auto max-w-2xl text-center">
+              <span className="eyebrow-light justify-center">Our Mission</span>
+              <h2 className="mt-5 text-3xl font-bold text-white sm:text-[2.5rem] text-balance">
+                What we commit to, every day
+              </h2>
             </div>
-            <div className="order-1 md:order-2">
-               <img src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=80" className="rounded-2xl shadow-2xl w-full" alt="Vision" />
-            </div>
-         </div>
+          </Reveal>
 
-         <div className="bg-gray-50 rounded-3xl p-12">
-            <div className="text-center mb-12">
-               <div className="inline-block p-4 rounded-full bg-green-100 text-green-600 text-4xl mb-4"><i className="fas fa-bullseye"></i></div>
-               <h2 className="text-4xl font-bold font-serif">Our Mission</h2>
+          {mission.length > 0 ? (
+            <div className="mt-14 grid gap-5 sm:grid-cols-2">
+              {mission.map((item, index) => (
+                <Reveal key={`${item}-${index}`} delay={(index % 2) * 90}>
+                  <div className="flex h-full items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.05] p-7 backdrop-blur transition-colors duration-500 hover:border-brand-400/40 hover:bg-white/[0.08]">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-500/15 text-[13px] text-brand-400">
+                      <i className="fas fa-check" aria-hidden />
+                    </span>
+                    <p className="text-[16px] font-medium leading-relaxed text-ink-100">{item}</p>
+                  </div>
+                </Reveal>
+              ))}
             </div>
-            
-            <div className="grid md:grid-cols-2 gap-8">
-               {content?.mission?.map((item, idx) => (
-                 <div key={idx} className="bg-white p-6 rounded-xl shadow-md flex items-start">
-                    <i className="fas fa-check-circle text-green-500 mt-1 mr-4 text-xl flex-shrink-0"></i>
-                    <p className="text-gray-700 font-medium leading-relaxed">{item}</p>
-                 </div>
-               ))}
-            </div>
-         </div>
-      </div>
+          ) : (
+            <p className="mt-14 text-center text-[15px] text-ink-400">
+              Our mission statement is being updated.
+            </p>
+          )}
+        </div>
+      </section>
+
+      <CtaBand
+        title="Share our commitment"
+        text="Whether as a partner, a customer or a member of our team — there is a place for you here."
+      />
     </div>
   );
 };

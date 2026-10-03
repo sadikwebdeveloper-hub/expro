@@ -13,19 +13,26 @@ export const Setup: React.FC = () => {
      });
   }, [navigate]);
 
+  const [submitting, setSubmitting] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if(form.password !== form.confirmPass) {
-        setError("Passwords do not match");
-        return;
+    if (form.password !== form.confirmPass) {
+      setError('Passwords do not match');
+      return;
     }
-    
-    const success = await backend.setupAdmin(form);
-    if (success) {
-        alert("System Setup Complete! Please login.");
-        navigate('/admin/login');
-    } else {
-        setError("Setup failed. System might already be initialized.");
+
+    setSubmitting(true);
+    setError('');
+    try {
+      await backend.setupAdmin(form);
+      alert('System Setup Complete! Please login.');
+      navigate('/admin/login');
+    } catch (err: any) {
+      // Surface the server's real reason (usually "Setup already completed").
+      setError(err?.message || 'Setup failed. The system may already be initialized.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -60,8 +67,12 @@ export const Setup: React.FC = () => {
                         <input required type="password" className="w-full border p-3 rounded-lg mt-1" value={form.confirmPass} onChange={e => setForm({...form, confirmPass: e.target.value})} />
                     </div>
                 </div>
-                <button className="w-full bg-blue-600 text-white py-4 rounded-lg font-bold hover:bg-blue-700 shadow-xl mt-4">
-                    Complete Setup
+                <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full bg-blue-600 text-white py-4 rounded-lg font-bold hover:bg-blue-700 shadow-xl mt-4 disabled:opacity-60"
+                >
+                    {submitting ? 'Creating…' : 'Complete Setup'}
                 </button>
             </form>
         </div>

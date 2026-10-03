@@ -1,32 +1,52 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+
+const FALLBACK_LOGO = 'https://nexalite-org.github.io/storage/logo.png';
 
 export const Preloader: React.FC = () => {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setProgress((p) => (p >= 92 ? p : p + Math.random() * 14));
+    }, 140);
+    return () => window.clearInterval(timer);
+  }, []);
+
   return (
-    <div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center transition-opacity duration-700">
-      <div className="relative">
-        {/* Animated Circles */}
-        <div className="absolute inset-0 border-4 border-blue-100 rounded-full animate-ping opacity-75"></div>
-        <div className="absolute inset-0 border-4 border-blue-200 rounded-full animate-ping opacity-50 delay-150"></div>
-        
-        {/* Logo Container */}
-        <div className="relative bg-white p-6 rounded-full shadow-2xl z-10 w-40 h-40 flex items-center justify-center animate-bounce-slow">
-            <img 
-                src="https://nexalite-org.github.io/storage/logo.png" 
-                alt="Expro Group" 
-                className="w-28 object-contain"
-                onError={(e) => (e.target as HTMLImageElement).src = 'https://placehold.co/100x40?text=EXPRO'}
+    <div
+      className="fixed inset-0 z-[100] grid place-items-center overflow-hidden bg-ink-950"
+      role="status"
+      aria-live="polite"
+    >
+      <div className="absolute inset-0 bg-mesh-hero opacity-70" aria-hidden />
+
+      <div className="relative flex flex-col items-center">
+        <div className="relative grid h-32 w-32 place-items-center">
+          <span className="absolute inset-0 rounded-full border border-brand-500/20" aria-hidden />
+          <span className="absolute inset-0 animate-spin-slow rounded-full border-t-2 border-brand-400" aria-hidden />
+          <span className="absolute inset-3 rounded-full border border-white/[0.07]" aria-hidden />
+          <div className="grid h-20 w-20 place-items-center rounded-full bg-white shadow-lift">
+            <img
+              src={FALLBACK_LOGO}
+              alt="Expro Group"
+              className="h-11 w-auto object-contain"
+              onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_LOGO; }}
             />
+          </div>
         </div>
+
+        <div className="mt-10 h-[3px] w-52 overflow-hidden rounded-full bg-white/10">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-brand-400 to-brand-600 transition-[width] duration-300 ease-out"
+            style={{ width: `${Math.min(progress, 96)}%` }}
+          />
+        </div>
+
+        <p className="mt-5 text-[10.5px] font-bold uppercase tracking-[0.32em] text-ink-400">
+          Loading Experience
+        </p>
+        <span className="sr-only">Loading</span>
       </div>
-      
-      {/* Loading Bar */}
-      <div className="mt-8 w-48 h-1 bg-gray-100 rounded-full overflow-hidden">
-        <div className="h-full bg-blue-600 animate-loading-bar"></div>
-      </div>
-      
-      <p className="mt-4 text-blue-900 font-serif font-bold tracking-[0.2em] text-sm animate-pulse">
-        LOADING EXPERIENCE
-      </p>
     </div>
   );
 };

@@ -145,14 +145,38 @@ export const contentController = {
 
     const payload = { ...item, date: new Date().toLocaleString() };
 
+    // The submission is stored first, so mail trouble never loses a message.
+    // Report what actually happened with delivery instead of always claiming success.
+    let notification = { attempted: 0, delivered: 0, failed: 0, skipped: true, results: [] };
+    let confirmation = { delivered: false, skipped: true };
+
     try {
-      await mailService.sendContactFormNotification(payload);
-      await mailService.sendContactConfirmation(payload);
+      notification = await mailService.sendContactFormNotification(payload);
+      confirmation = await mailService.sendContactConfirmation(payload);
     } catch (err) {
       logger.error('Contact email failed', { error: err.message });
+      notification = { ...notification, failed: notification.attempted || 1, error: err.message };
     }
 
-    return sendSuccess(res, 'Message sent successfully', { success: true });
+    const mailDelivered = notification.delivered > 0;
+
+    return sendSuccess(
+      res,
+      mailDelivered
+        ? 'Message sent successfully'
+        : 'Message received — email notification could not be delivered',
+      {
+        success: true,
+        id: item.id,
+        emailNotification: {
+          delivered: mailDelivered,
+          attempted: notification.attempted,
+          failed: notification.failed,
+          skipped: Boolean(notification.skipped),
+          confirmationDelivered: Boolean(confirmation.delivered),
+        },
+      }
+    );
   },
 
   async trackVisit(req, res) {

@@ -1,66 +1,82 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { backend } from '../services/backend';
 import { Company } from '../types';
 import { Preloader } from '../components/Preloader';
+import { PageHero, Reveal, CtaBand } from '../components/ui';
 
 export const Companies: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [companies, setCompanies] = useState<Company[]>([]);
 
   useEffect(() => {
-    backend.getCompanies().then(data => {
-        setCompanies(data);
-        setTimeout(() => setLoading(false), 800);
+    let alive = true;
+    backend.getCompanies().then((data) => {
+      if (!alive) return;
+      setCompanies(data);
+      window.setTimeout(() => alive && setLoading(false), 700);
     });
+    return () => { alive = false; };
   }, []);
 
   if (loading) return <Preloader />;
 
   return (
-    <div className="animate-fade-in-up">
-       <div className="relative h-[400px] flex items-center justify-center bg-gray-900 text-white" style={{backgroundImage: "url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80')", backgroundAttachment: 'fixed', backgroundSize: 'cover'}}>
-        <div className="absolute inset-0 bg-black/70"></div>
-        <div className="relative z-10 text-center px-4">
-          <h1 className="text-5xl font-bold mb-4 font-serif">Our Companies</h1>
-          <p className="text-xl opacity-90 max-w-2xl mx-auto">A synergy of diverse entities working towards a sustainable future.</p>
-        </div>
-      </div>
+    <div>
+      <PageHero
+        eyebrow="Our Portfolio"
+        title="Companies & subsidiaries"
+        subtitle="A synergy of diverse entities, each specialised — all moving toward the same sustainable future."
+        image="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1600"
+        breadcrumb={[{ label: 'Home', to: '/' }, { label: 'Our Companies' }]}
+      />
 
-      <div className="container mx-auto px-4 py-20">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {companies.map((company) => (
-              <div key={company.id} className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-blue-200 transition-all duration-300 flex flex-col items-start h-full group">
-                {/* Logo or Icon Display */}
-                <div className="h-20 mb-6 flex items-center">
-                    {company.image ? (
-                        <img src={company.image} alt={company.name} className="h-full w-auto object-contain max-w-[200px]" />
-                    ) : (
-                        <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-3xl group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 transform group-hover:rotate-3">
-                            <i className={`fas ${company.icon}`}></i>
-                        </div>
-                    )}
-                </div>
-                
-                <h3 className="text-2xl font-bold text-gray-800 mb-3 group-hover:text-blue-600 transition">{company.name}</h3>
-                <p className="text-gray-600 flex-grow leading-relaxed">{company.description}</p>
-                <div className="mt-6 pt-6 border-t w-full">
-                  <span className="text-sm font-bold text-blue-600 uppercase tracking-wider flex items-center cursor-pointer hover:underline">
-                    View Profile <i className="fas fa-arrow-right ml-2 text-xs"></i>
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-          {companies.length === 0 && <div className="text-center py-20 text-gray-400">Loading ecosystem...</div>}
-      </div>
+      <section className="py-20 sm:py-24">
+        <div className="container-x">
+          {companies.length > 0 ? (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {companies.map((company, index) => (
+                <Reveal key={company.id} delay={(index % 3) * 90}>
+                  <article className="card card-hover group flex h-full flex-col p-8">
+                    <span className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl bg-ink-50 text-2xl text-ink-600 transition-all duration-500 group-hover:bg-brand-500 group-hover:text-white">
+                      {company.image ? (
+                        <img src={company.image} alt="" className="h-12 w-12 object-contain" />
+                      ) : (
+                        <i className={`fas ${company.icon || 'fa-building'}`} aria-hidden />
+                      )}
+                    </span>
 
-      <div className="bg-gray-100 py-20">
-        <div className="container mx-auto px-4 text-center">
-           <h2 className="text-3xl font-bold mb-6">Interested in doing business with us?</h2>
-           <p className="mb-8 text-gray-600 max-w-2xl mx-auto">We are always open to new partnerships and opportunities that align with our vision of development and quality service.</p>
-           <a href="/#/contact" className="bg-blue-600 text-white px-8 py-3 rounded-full font-bold hover:bg-blue-700 transition">Contact Business Development</a>
+                    <h2 className="mt-7 text-xl font-bold text-ink-900 transition-colors group-hover:text-brand-600">
+                      {company.name}
+                    </h2>
+                    <p className="mt-3 flex-1 text-[14.5px] leading-relaxed text-ink-500">{company.description}</p>
+
+                    <div className="mt-7 border-t border-ink-900/[0.07] pt-5">
+                      <Link
+                        to="/contact"
+                        className="group/link inline-flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.12em] text-brand-600"
+                      >
+                        Enquire
+                        <i className="fas fa-arrow-right text-[10px] transition-transform group-hover/link:translate-x-1" aria-hidden />
+                      </Link>
+                    </div>
+                  </article>
+                </Reveal>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-3xl border border-dashed border-ink-900/15 bg-ink-50/60 py-24 text-center">
+              <i className="fas fa-building text-3xl text-ink-300" aria-hidden />
+              <p className="mt-4 text-[15px] text-ink-500">Our portfolio is being updated. Please check back soon.</p>
+            </div>
+          )}
         </div>
-      </div>
+      </section>
+
+      <CtaBand
+        title="Interested in doing business with us?"
+        text="We are open to partnerships that align with our vision of development and quality service."
+      />
     </div>
   );
 };

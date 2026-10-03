@@ -85,6 +85,8 @@ const envSmtpDefaults = () => ({
   fromEmail: env.smtp.fromEmail || env.smtp.user || '',
   fromName: env.smtp.fromName || 'Expro Group',
   replyTo: env.smtp.replyTo || env.smtp.fromEmail || '',
+  // Only override when explicitly set, otherwise keep the panel/port default.
+  ...(env.smtp.encryption ? { encryption: env.smtp.encryption } : {}),
   enabled: Boolean(env.smtp.host && env.smtp.user && env.smtp.pass),
 });
 
@@ -139,11 +141,20 @@ export const settingsService = {
   async ensureSettings() {
     const data = await db.getAll();
 
-    if (!data.settings) {
-      const legacy = migrateFromLegacyConfig(data.config);
-      data.settings = deepMerge(deepMerge(DEFAULT_SETTINGS, legacy), {
-        smtp: deepMerge(envSmtpDefaults(), DEFAULT_SETTINGS.smtp),
-      });
+    const legacy = data.config ? migrateFromLegacyConfig(data.config) : {};
+
+    // Always deep-merge over the defaults. A data.json written by an older
+    // version can be missing whole groups (branding, otp, security...), and
+    // syncPublicConfig reads those paths unconditionally — without this the
+    // first settings update after an upgrade throws a TypeError.
+    const merged = deepMerge(deepMerge(DEFAULT_SETTINGS, legacy), {
+      smtp: deepMerge(envSmtpDefaults(), DEFAULT_SETTINGS.smtp),
+    });
+
+    const completed = deepMerge(merged, data.settings || {});
+
+    if (!data.settings || JSON.stringify(completed) !== JSON.stringify(data.settings)) {
+      data.settings = completed;
       await this.syncPublicConfig(data);
       await db.save(data);
     }
@@ -152,37 +163,48 @@ export const settingsService = {
   },
 
   syncPublicConfig(data) {
-    const s = data.settings;
+    const s = data.settings || {};
+    // Destructured with defaults so a partially-populated settings object can
+    // never throw here — this runs on every settings write and at startup.
+    const {
+      branding = {},
+      contact = {},
+      social = {},
+      footer = {},
+      seo = {},
+      general = {},
+    } = s;
+
     data.config = {
       ...(data.config || {}),
-      logoUrl: s.branding.logoUrl,
-      faviconUrl: s.branding.faviconUrl,
-      phone: s.contact.phone,
-      email: s.contact.email,
-      supportEmail: s.contact.supportEmail,
-      address: s.contact.address,
-      mapUrl: s.contact.mapUrl,
-      notificationEmails: s.contact.notificationEmails,
-      facebookUrl: s.social.facebook,
-      instagramUrl: s.social.instagram,
-      linkedinUrl: s.social.linkedin,
-      twitterUrl: s.social.twitter,
-      youtubeUrl: s.social.youtube,
-      whatsappUrl: s.social.whatsapp,
-      telegramUrl: s.social.telegram,
-      messengerUrl: s.social.messenger,
-      footerText: s.footer.copyright,
-      metaTitle: s.seo.metaTitle,
-      metaDescription: s.seo.metaDescription,
-      keywords: s.seo.keywords,
-      googleAnalyticsId: s.seo.googleAnalyticsId,
-      facebookPixelId: s.seo.facebookPixelId,
-      websiteName: s.general.websiteName,
-      timezone: s.general.timezone,
-      currency: s.general.currency,
-      language: s.general.language,
-      maintenanceMode: s.general.maintenanceMode,
-      maintenanceMessage: s.general.maintenanceMessage,
+      logoUrl: branding.logoUrl,
+      faviconUrl: branding.faviconUrl,
+      phone: contact.phone,
+      email: contact.email,
+      supportEmail: contact.supportEmail,
+      address: contact.address,
+      mapUrl: contact.mapUrl,
+      notificationEmails: contact.notificationEmails,
+      facebookUrl: social.facebook,
+      instagramUrl: social.instagram,
+      linkedinUrl: social.linkedin,
+      twitterUrl: social.twitter,
+      youtubeUrl: social.youtube,
+      whatsappUrl: social.whatsapp,
+      telegramUrl: social.telegram,
+      messengerUrl: social.messenger,
+      footerText: footer.copyright,
+      metaTitle: seo.metaTitle,
+      metaDescription: seo.metaDescription,
+      keywords: seo.keywords,
+      googleAnalyticsId: seo.googleAnalyticsId,
+      facebookPixelId: seo.facebookPixelId,
+      websiteName: general.websiteName,
+      timezone: general.timezone,
+      currency: general.currency,
+      language: general.language,
+      maintenanceMode: general.maintenanceMode,
+      maintenanceMessage: general.maintenanceMessage,
     };
     return data.config;
   },

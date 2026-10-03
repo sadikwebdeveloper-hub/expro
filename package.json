@@ -9,7 +9,12 @@
     "dev:server": "node server.js",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node tests/smtp.test.js && node tests/contact-api.test.js",
+    "test:smtp": "node tests/smtp.test.js",
+    "test:api": "node tests/contact-api.test.js",
+    "test:render": "node tests/render.test.js",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.3.0",
@@ -43,6 +48,9 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "jsdom": "^30.1.1",
+    "mailparser": "^3.9.33",
+    "smtp-server": "^3.19.16",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

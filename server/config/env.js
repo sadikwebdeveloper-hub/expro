@@ -21,6 +21,9 @@ export const env = {
     host: process.env.SMTP_HOST || '',
     port: parsePort(process.env.SMTP_PORT, 587),
     secure: parseBool(process.env.SMTP_SECURE, parsePort(process.env.SMTP_PORT, 587) === 465),
+    // Optional explicit mode (SSL | TLS | NONE). Overrides port-based detection
+    // so a provider on a non-standard port can still be configured correctly.
+    encryption: (process.env.SMTP_ENCRYPTION || '').toUpperCase() || undefined,
     user: process.env.SMTP_USER || '',
     pass: process.env.SMTP_PASS || '',
     fromName: process.env.SMTP_FROM_NAME || 'Expro Group',

@@ -193,7 +193,7 @@ export const PageHero: React.FC<{
         )}
 
         <span className="eyebrow-light">{eyebrow}</span>
-        <h1 className="mt-5 max-w-3xl text-4xl font-extrabold text-white sm:text-5xl lg:text-6xl text-balance">
+        <h1 className="mt-5 max-w-3xl font-extrabold text-white text-balance text-[clamp(1.85rem,1.3rem+2.4vw,3.75rem)]">
           {title}
         </h1>
         {subtitle && (

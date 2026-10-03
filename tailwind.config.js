@@ -73,6 +73,7 @@ export default {
         'bounce-slow': 'bounceSlow 3s infinite',
         'loading-bar': 'loadingBar 1.4s ease-in-out infinite',
         marquee: 'marquee 38s linear infinite',
+        kenburns: 'kenburns 24s ease-in-out infinite',
         'spin-slow': 'spin 14s linear infinite',
         shimmer: 'shimmer 2.2s linear infinite',
       },
@@ -101,6 +102,15 @@ export default {
         marquee: {
           '0%': { transform: 'translateX(0)' },
           '100%': { transform: 'translateX(-50%)' },
+        },
+        // Scale-only. The hero background used the `float` (translateY) keyframes,
+        // which overwrite the inline transform and drop the cover scale, leaving an
+        // uncovered strip at the edge. Keeping scale and translate in one keyframe
+        // avoids the conflict.
+        kenburns: {
+          '0%': { transform: 'scale(1.06) translate3d(0, 0, 0)' },
+          '50%': { transform: 'scale(1.12) translate3d(0, -1%, 0)' },
+          '100%': { transform: 'scale(1.06) translate3d(0, 0, 0)' },
         },
         shimmer: {
           '0%': { backgroundPosition: '-200% 0' },

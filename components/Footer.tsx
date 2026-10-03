@@ -71,7 +71,7 @@ export const Footer: React.FC = () => {
               type="email"
               required
               placeholder="you@company.com"
-              className="h-13 w-full rounded-full border border-white/12 bg-white/[0.06] px-6 py-3.5 text-[15px] text-white placeholder:text-ink-400 backdrop-blur transition focus:border-brand-400/60 focus:bg-white/[0.09] focus:outline-none"
+              className="h-[52px] w-full rounded-full border border-white/12 bg-white/[0.06] px-6 py-3.5 text-[15px] text-white placeholder:text-ink-400 backdrop-blur transition focus:border-brand-400/60 focus:bg-white/[0.09] focus:outline-none"
             />
             <button type="submit" className="btn-primary shrink-0">
               Subscribe <i className="fas fa-paper-plane text-sm" aria-hidden />

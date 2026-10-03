@@ -147,12 +147,19 @@ export const Header: React.FC = () => {
       >
         <div className="container-x">
           <div className={`flex items-center justify-between transition-all duration-500 ${scrolled ? 'h-[68px]' : 'h-[76px]'}`}>
-            <Link to="/" className="group flex shrink-0 items-center gap-3" aria-label="Expro Group home">
+            <Link to="/" className="group flex min-w-0 shrink items-center gap-3" aria-label="Expro Group home">
+              {/*
+                No colour filter here. The previous `brightness-0 invert` forced every
+                pixel black and then flipped it to pure white, which turned any logo
+                with an opaque background into a solid white rectangle.
+                max-w keeps a wide logo from shoving the menu button off-screen, and
+                object-contain preserves the aspect ratio at any size.
+              */}
               <img
                 src={config?.logoUrl || FALLBACK_LOGO}
                 alt={config?.websiteName || 'Expro Group'}
-                className={`w-auto object-contain transition-all duration-500 ${scrolled ? 'h-10' : 'h-12'} ${
-                  transparent ? 'brightness-0 invert' : ''
+                className={`h-auto w-auto max-w-[clamp(112px,38vw,176px)] object-contain object-left transition-opacity duration-300 sm:max-w-[200px] ${
+                  scrolled ? 'max-h-9' : 'max-h-11'
                 } group-hover:opacity-85`}
                 onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_LOGO; }}
               />
@@ -253,7 +260,7 @@ export const Header: React.FC = () => {
 
       {/* Mobile drawer */}
       <div
-        className={`fixed inset-0 z-[60] lg:hidden ${mobileOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
+        className={`fixed inset-0 z-[60] overflow-hidden lg:hidden ${mobileOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
         aria-hidden={!mobileOpen}
       >
         <div
@@ -263,7 +270,7 @@ export const Header: React.FC = () => {
           onClick={() => setMobileOpen(false)}
         />
         <aside
-          className={`absolute right-0 top-0 flex h-full w-[86%] max-w-sm flex-col bg-white shadow-2xl transition-transform duration-400 ease-out ${
+          className={`absolute right-0 top-0 flex h-full w-[86%] max-w-sm flex-col bg-white shadow-2xl transition-transform duration-300 ease-out ${
             mobileOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
         >

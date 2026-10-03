@@ -2,24 +2,20 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { backend } from '../../services/backend';
 import { AboutContent } from '../../types';
-import { Preloader } from '../../components/Preloader';
 import { PageHero, Reveal, CtaBand, SmartImage } from '../../components/ui';
 
 export const Vision: React.FC = () => {
   const [content, setContent] = useState<AboutContent | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let alive = true;
     backend.getAboutContent().then((c) => {
       if (!alive) return;
       setContent(c);
-      window.setTimeout(() => alive && setLoading(false), 500);
     });
     return () => { alive = false; };
   }, []);
 
-  if (loading) return <Preloader />;
 
   const mission = content?.mission?.filter(Boolean) ?? [];
 

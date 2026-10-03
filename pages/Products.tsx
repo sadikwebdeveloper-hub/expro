@@ -1,11 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { backend } from '../services/backend';
 import { Product } from '../types';
-import { Preloader } from '../components/Preloader';
 import { PageHero, Reveal, CtaBand, SmartImage } from '../components/ui';
 
 export const Products: React.FC = () => {
-  const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
@@ -15,7 +13,6 @@ export const Products: React.FC = () => {
     backend.getProducts().then((data) => {
       if (!alive) return;
       setProducts(data);
-      window.setTimeout(() => alive && setLoading(false), 700);
     });
     return () => { alive = false; };
   }, []);
@@ -34,7 +31,6 @@ export const Products: React.FC = () => {
     });
   }, [products, category, query]);
 
-  if (loading) return <Preloader />;
 
   return (
     <div>

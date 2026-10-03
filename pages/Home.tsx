@@ -12,7 +12,6 @@ import {
   ServiceCard,
   Director,
 } from '../types';
-import { Preloader } from '../components/Preloader';
 import { Reveal, SectionHeading, CountUp, CtaBand, SmartImage } from '../components/ui';
 
 /* ------------------------------------------------------------------ */
@@ -46,7 +45,7 @@ const Hero: React.FC<{ slides: HeroSlide[] }> = ({ slides }) => {
 
   return (
     <section
-      className="relative -mt-[76px] flex min-h-[100svh] items-center overflow-hidden bg-ink-950 pt-[76px]"
+      className="relative -mt-[76px] flex min-h-[88svh] items-center overflow-hidden bg-ink-950 pt-[76px] lg:min-h-[100svh]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       aria-roledescription="carousel"
@@ -61,9 +60,15 @@ const Hero: React.FC<{ slides: HeroSlide[] }> = ({ slides }) => {
           }`}
           aria-hidden={index !== current}
         >
+          {/*
+            The scale lives in the keyframe, not an inline style. An inline
+            `transform` is overwritten by the animation, which previously dropped
+            the cover scale on the active slide. Scale starts above 1 so the
+            translate never exposes an uncovered edge.
+          */}
           <div
-            className={`absolute inset-0 bg-cover bg-center ${index === current ? 'animate-[float_18s_ease-in-out_infinite]' : ''}`}
-            style={{ backgroundImage: `url(${item.image})`, transform: 'scale(1.06)' }}
+            className={`absolute inset-0 bg-cover bg-center ${index === current ? 'animate-kenburns' : ''}`}
+            style={{ backgroundImage: `url(${item.image})` }}
           />
         </div>
       ))}
@@ -73,7 +78,7 @@ const Hero: React.FC<{ slides: HeroSlide[] }> = ({ slides }) => {
       <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-transparent to-ink-950/60" aria-hidden />
       <div className="absolute inset-0 bg-mesh-hero opacity-40 mix-blend-screen" aria-hidden />
 
-      <div className="container-x relative z-10 w-full py-24">
+      <div className="container-x relative z-10 w-full py-14 sm:py-20 lg:py-24">
         <div className="max-w-3xl">
           <span
             key={`eyebrow-${slide.id}`}
@@ -85,7 +90,7 @@ const Hero: React.FC<{ slides: HeroSlide[] }> = ({ slides }) => {
 
           <h1
             key={`title-${slide.id}`}
-            className="mt-6 text-[2.6rem] font-extrabold leading-[1.06] text-white sm:text-6xl lg:text-[4.4rem] animate-fade-in-up text-balance"
+            className="mt-6 font-extrabold leading-[1.08] text-white animate-fade-in-up text-balance text-[clamp(2rem,1.4rem+3.2vw,4.4rem)]"
             style={{ animationDelay: '180ms', opacity: 0 }}
           >
             {slide.title}
@@ -93,7 +98,7 @@ const Hero: React.FC<{ slides: HeroSlide[] }> = ({ slides }) => {
 
           <p
             key={`desc-${slide.id}`}
-            className="mt-7 max-w-xl text-[17px] leading-relaxed text-ink-200 sm:text-lg animate-fade-in-up text-pretty"
+            className="mt-6 max-w-[min(100%,36rem)] text-[16px] leading-relaxed text-ink-200 sm:mt-7 sm:text-lg animate-fade-in-up text-pretty"
             style={{ animationDelay: '300ms', opacity: 0 }}
           >
             {slide.description}
@@ -101,7 +106,7 @@ const Hero: React.FC<{ slides: HeroSlide[] }> = ({ slides }) => {
 
           <div
             key={`cta-${slide.id}`}
-            className="mt-10 flex flex-wrap items-center gap-4 animate-fade-in-up"
+            className="mt-8 flex flex-wrap items-center gap-3 sm:mt-10 sm:gap-4 animate-fade-in-up"
             style={{ animationDelay: '420ms', opacity: 0 }}
           >
             <Link to={slide.link || '/about'} className="btn-primary">
@@ -115,7 +120,7 @@ const Hero: React.FC<{ slides: HeroSlide[] }> = ({ slides }) => {
 
         {/* Controls */}
         {slides.length > 1 && (
-          <div className="mt-16 flex items-center gap-5">
+          <div className="mt-10 flex items-center gap-5 sm:mt-14">
             <div className="flex items-center gap-2.5">
               {slides.map((item, index) => (
                 <button
@@ -180,7 +185,6 @@ const ServiceStrip: React.FC<{ services: ServiceCard[] }> = ({ services }) => {
 /* Home                                                                */
 /* ------------------------------------------------------------------ */
 export const Home: React.FC = () => {
-  const [loading, setLoading] = useState(true);
   const [slides, setSlides] = useState<HeroSlide[]>([]);
   const [about, setAbout] = useState<AboutContent | null>(null);
   const [services, setServices] = useState<ServiceCard[]>([]);
@@ -208,13 +212,11 @@ export const Home: React.FC = () => {
       if (!alive) return;
       setSlides(s); setAbout(a); setServices(sv); setAchievements(ach);
       setCompanies(c); setProducts(p); setNews(n); setDirectors(d); setPartners(pt);
-      window.setTimeout(() => alive && setLoading(false), 900);
     };
     load();
     return () => { alive = false; };
   }, []);
 
-  if (loading) return <Preloader />;
 
   const marqueeItems = partners.length > 0 ? partners : [];
 
@@ -238,7 +240,12 @@ export const Home: React.FC = () => {
                     className="relative aspect-[4/3] rounded-3xl shadow-lift"
                     imgClassName="h-full w-full object-cover"
                   />
-                  <div className="absolute -bottom-8 -right-4 rounded-2xl bg-ink-900 px-7 py-6 text-white shadow-lift sm:-right-8">
+                  {/*
+                    The offset must stay smaller than .container-x's padding at every
+                    breakpoint (px-5 / sm:px-6 / lg:px-8), otherwise this badge pokes
+                    past the viewport edge and creates a horizontal scrollbar.
+                  */}
+                  <div className="absolute -bottom-8 -right-2 rounded-2xl bg-ink-900 px-7 py-6 text-white shadow-lift sm:-right-4 lg:-right-6">
                     <p className="text-3xl font-extrabold text-brand-400">25+</p>
                     <p className="mt-1 text-[12.5px] uppercase tracking-[0.16em] text-ink-300">Years of Excellence</p>
                   </div>

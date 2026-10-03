@@ -14,6 +14,7 @@
     "test:smtp": "node tests/smtp.test.js",
     "test:api": "node tests/contact-api.test.js",
     "test:render": "node tests/render.test.js",
+    "test:layout": "node tests/layout-audit.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

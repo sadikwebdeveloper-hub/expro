@@ -2,11 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { backend } from '../services/backend';
 import { Company } from '../types';
-import { Preloader } from '../components/Preloader';
 import { PageHero, Reveal, CtaBand } from '../components/ui';
 
 export const Companies: React.FC = () => {
-  const [loading, setLoading] = useState(true);
   const [companies, setCompanies] = useState<Company[]>([]);
 
   useEffect(() => {
@@ -14,12 +12,10 @@ export const Companies: React.FC = () => {
     backend.getCompanies().then((data) => {
       if (!alive) return;
       setCompanies(data);
-      window.setTimeout(() => alive && setLoading(false), 700);
     });
     return () => { alive = false; };
   }, []);
 
-  if (loading) return <Preloader />;
 
   return (
     <div>

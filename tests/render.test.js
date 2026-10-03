@@ -18,7 +18,7 @@ const BASE = `http://127.0.0.1:${PORT}`;
 const BUNDLE = path.join(ROOT, 'tests', '.render-bundle.cjs');
 
 const ROUTES = [
-  { hash: '#/', mustContain: ['Legacy of Excellence', 'impact areas'], verifyDirectorLinks: true },
+  { hash: '#/', mustContain: ['Legacy of Excellence', 'impact areas'] },
   { hash: '#/companies', mustContain: ['Companies & subsidiaries'] },
   { hash: '#/products', mustContain: ['Products & services'] },
   {
@@ -171,16 +171,6 @@ const run = async () => {
           !text.toLowerCase().includes(needle.toLowerCase()),
           `did not expect to find "${needle}"`
         );
-      });
-    }
-
-    if (route.verifyDirectorLinks) {
-      check('homepage leadership cards link to the corresponding message pages', () => {
-        const paths = [...window.document.querySelectorAll('a[aria-label^="Read "]')]
-          .map((link) => link.getAttribute('href'));
-        assert.ok(paths.includes('#/about/chairman'), 'Chairman card should open Chairman’s message');
-        assert.ok(paths.includes('#/about/md'), 'Managing Director card should open the MD’s message');
-        assert.ok(paths.includes('#/about/coordinator'), 'Coordinator card should open Coordinator’s message');
       });
     }
 

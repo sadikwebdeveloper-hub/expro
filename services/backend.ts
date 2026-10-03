@@ -183,22 +183,20 @@ class RealBackend {
     try {
       const data = await this.request(`${API_URL}/check-setup`, { headers: {} });
       return data?.needsSetup ?? false;
-    } catch {
-      return MOCK_DATA.users.length === 0;
+    } catch (err) {
+      // Fail safe. The old fallback returned MOCK_DATA.users.length === 0, which
+      // is always true, so any transient error here (rate limit, brief network
+      // blip) pushed admins off the login page into the first-time setup wizard.
+      console.warn('check-setup unavailable, assuming the site is already set up:', err);
+      return false;
     }
   }
 
   async setupAdmin(data: any): Promise<boolean> {
-    try {
-      await this.postJson(`${API_URL}/setup`, data, false);
-      return true;
-    } catch {
-      if (MOCK_DATA.users.length === 0) {
-        MOCK_DATA.users.push({ id: 1, ...data, role: 'super_admin' });
-        return true;
-      }
-      return false;
-    }
+    // Let the real error through — the Setup page shows it. Silently faking
+    // success here meant the admin was sent to a login that could never work.
+    await this.postJson(`${API_URL}/setup`, data, false);
+    return true;
   }
 
   async login(username: string, password: string, rememberMe = false): Promise<{ user: User | null; forcePasswordChange?: boolean }> {
@@ -432,8 +430,8 @@ class RealBackend {
   async getSlides(): Promise<HeroSlide[]> {
     try {
       const data = await this.request(`${API_URL}/slides`, { headers: {} });
-      return (data && data.length > 0) ? data : MOCK_DATA.slides;
-    } catch { return MOCK_DATA.slides; }
+      return Array.isArray(data) ? data : [];
+    } catch { return []; }
   }
 
   async updateSlides(slides: HeroSlide[]): Promise<void> {
@@ -454,8 +452,8 @@ class RealBackend {
   async getCompanies(): Promise<Company[]> {
     try {
       const data = await this.request(`${API_URL}/companies`, { headers: {} });
-      return (data && data.length > 0) ? data : MOCK_DATA.companies;
-    } catch { return MOCK_DATA.companies; }
+      return Array.isArray(data) ? data : [];
+    } catch { return []; }
   }
 
   async addCompany(formData: FormData): Promise<void> {
@@ -473,8 +471,8 @@ class RealBackend {
   async getProducts(): Promise<Product[]> {
     try {
       const data = await this.request(`${API_URL}/products`, { headers: {} });
-      return (data && data.length > 0) ? data : MOCK_DATA.products;
-    } catch { return MOCK_DATA.products; }
+      return Array.isArray(data) ? data : [];
+    } catch { return []; }
   }
 
   async addProduct(formData: FormData): Promise<void> {
@@ -492,8 +490,8 @@ class RealBackend {
   async getNews(): Promise<NewsItem[]> {
     try {
       const data = await this.request(`${API_URL}/news`, { headers: {} });
-      return (data && data.length > 0) ? data : MOCK_DATA.news;
-    } catch { return MOCK_DATA.news; }
+      return Array.isArray(data) ? data : [];
+    } catch { return []; }
   }
 
   async addNews(formData: FormData): Promise<void> {
@@ -528,8 +526,8 @@ class RealBackend {
   async getAchievements(): Promise<Achievement[]> {
     try {
       const data = await this.request(`${API_URL}/achievements`, { headers: {} });
-      return (data && data.length > 0) ? data : MOCK_DATA.achievements;
-    } catch { return MOCK_DATA.achievements; }
+      return Array.isArray(data) ? data : [];
+    } catch { return []; }
   }
 
   async addAchievement(item: any): Promise<void> {
@@ -547,8 +545,8 @@ class RealBackend {
   async getPartners(): Promise<Partner[]> {
     try {
       const data = await this.request(`${API_URL}/partners`, { headers: {} });
-      return (data && data.length > 0) ? data : MOCK_DATA.partners;
-    } catch { return MOCK_DATA.partners; }
+      return Array.isArray(data) ? data : [];
+    } catch { return []; }
   }
 
   async addPartner(item: any): Promise<void> {
@@ -566,8 +564,8 @@ class RealBackend {
   async getServiceCards(): Promise<ServiceCard[]> {
     try {
       const data = await this.request(`${API_URL}/services`, { headers: {} });
-      return (data && data.length > 0) ? data : MOCK_DATA.services;
-    } catch { return MOCK_DATA.services; }
+      return Array.isArray(data) ? data : [];
+    } catch { return []; }
   }
 
   async updateServiceCards(cards: ServiceCard[]): Promise<void> {
@@ -577,8 +575,8 @@ class RealBackend {
   async getDirectors(): Promise<Director[]> {
     try {
       const data = await this.request(`${API_URL}/directors`, { headers: {} });
-      return (data && data.length > 0) ? data : MOCK_DATA.directors;
-    } catch { return MOCK_DATA.directors; }
+      return Array.isArray(data) ? data : [];
+    } catch { return []; }
   }
 
   async addDirector(item: any): Promise<void> {
@@ -598,8 +596,16 @@ class RealBackend {
     catch { return MOCK_DATA.messages as any[]; }
   }
 
-  async sendMessage(msg: Omit<Message, 'id' | 'date'>): Promise<void> {
-    try { await this.postJson(`${API_URL}/messages`, msg, false); } catch { }
+  async sendMessage(
+    msg: Omit<Message, 'id' | 'date'>
+  ): Promise<{ emailDelivered: boolean; notificationSent: boolean }> {
+    // Deliberately does not swallow errors: the contact form needs to know
+    // whether the request actually reached the server.
+    const result = await this.postJson(`${API_URL}/messages`, msg, false);
+    return {
+      emailDelivered: Boolean(result?.emailNotification?.delivered),
+      notificationSent: result?.emailNotification?.skipped !== true,
+    };
   }
 
   async trackVisit(): Promise<void> {

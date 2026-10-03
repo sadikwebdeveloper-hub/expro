@@ -63,7 +63,11 @@ export class JsonDatabase {
   }
 }
 
-const DATA_FILE = path.join(__dirname, '..', '..', 'data.json');
+// Overridable so tests can run against a throwaway file instead of data.json.
+const DATA_FILE = process.env.EXPRO_DATA_FILE
+  ? path.resolve(process.env.EXPRO_DATA_FILE)
+  : path.join(__dirname, '..', '..', 'data.json');
+
 export const db = new JsonDatabase(DATA_FILE);
 
 export default db;

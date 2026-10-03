@@ -22,18 +22,12 @@ interface DashboardStats {
 
 export const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     backend.getDashboardStats()
       .then(setStats)
-      .catch(() => setStats(null))
-      .finally(() => setLoading(false));
+      .catch(() => setStats(null));
   }, []);
-
-  if (loading) {
-    return <div className="p-8 text-gray-500">Loading dashboard...</div>;
-  }
 
   const cards = [
     { label: 'Visitors', value: stats?.counts.visitors ?? 0, color: 'blue', icon: 'fa-globe' },

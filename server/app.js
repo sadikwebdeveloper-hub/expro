@@ -32,11 +32,17 @@ app.use(
             defaultSrc: ["'self'"],
             scriptSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-            fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-            imgSrc: ["'self'", 'data:', 'https:', 'https://res.cloudinary.com'],
+            fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+            imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
             connectSrc: ["'self'"],
-            mediaSrc: ["'self'", 'https://res.cloudinary.com'],
+            // Without an explicit frameSrc the map iframe falls back to
+            // default-src 'self' and is blocked in production.
+            frameSrc: ["'self'", 'https://www.google.com', 'https://maps.google.com', 'https://www.openstreetmap.org'],
+            mediaSrc: ["'self'", 'https:', 'blob:'],
             objectSrc: ["'none'"],
+            baseUri: ["'self'"],
+            formAction: ["'self'"],
+            upgradeInsecureRequests: [],
           },
         }
       : false,

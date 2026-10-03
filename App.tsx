@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Outlet, useLocation, Link } from 'react-router-dom';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
+import { BackToTop } from './components/ui';
 import { Home } from './pages/Home';
 import { Products } from './pages/Products';
 import { Contact } from './pages/Contact';
@@ -31,30 +32,59 @@ import { ManageMessages } from './pages/admin/ManageMessages';
 import { VisitorStats } from './pages/admin/VisitorStats';
 import { ManageUsers } from './pages/admin/ManageUsers';
 
+/** Scroll to the top whenever the route changes (unless the URL carries a hash). */
+const ScrollToTop: React.FC = () => {
+  const { pathname, hash } = useLocation();
+  useEffect(() => {
+    if (hash) return;
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [pathname, hash]);
+  return null;
+};
+
 const PublicLayout = () => {
   useEffect(() => {
     backend.trackVisit();
   }, []);
 
   return (
-    <div className="flex flex-col min-h-screen font-sans text-gray-800">
+    <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-grow">
         <Outlet />
       </main>
       <Footer />
+      <BackToTop />
     </div>
   );
 };
 
+const NotFound = () => (
+  <section className="relative grid min-h-[70vh] place-items-center overflow-hidden bg-ink-950 px-6 py-24">
+    <div className="absolute inset-0 bg-mesh-hero opacity-70" aria-hidden />
+    <div className="relative text-center">
+      <p className="text-[7rem] font-extrabold leading-none text-white/10 sm:text-[10rem]">404</p>
+      <h1 className="-mt-10 text-3xl font-bold text-white sm:text-4xl">This page has moved on</h1>
+      <p className="mx-auto mt-4 max-w-md text-[15px] leading-relaxed text-ink-300">
+        The page you were looking for doesn’t exist or has been relocated. Let’s get you back on track.
+      </p>
+      <div className="mt-9 flex flex-wrap justify-center gap-4">
+        <Link to="/" className="btn-primary">Back to Home</Link>
+        <Link to="/contact" className="btn-ghost-light">Contact Us</Link>
+      </div>
+    </div>
+  </section>
+);
+
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <Routes>
         {/* Public Routes */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={<Home />} />
-          <Route path="/about" element={<Strategies />} /> 
+          <Route path="/about" element={<Strategies />} />
           <Route path="/about/strategies" element={<Strategies />} />
           <Route path="/about/vision" element={<Vision />} />
           <Route path="/about/chairman" element={<Chairman />} />
@@ -64,24 +94,25 @@ function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/companies" element={<Companies />} />
           <Route path="/media" element={<Media />} />
+          <Route path="*" element={<NotFound />} />
         </Route>
 
         {/* Admin Routes */}
         <Route path="/admin/login" element={<Login />} />
         <Route path="/admin/setup" element={<Setup />} />
-        
+
         <Route path="/admin" element={<AdminLayout />}>
-           <Route path="dashboard" element={<Dashboard />} />
-           <Route path="messages" element={<ManageMessages />} />
-           <Route path="visitors" element={<VisitorStats />} />
-           <Route path="settings" element={<ManageSettings />} />
-           <Route path="users" element={<ManageUsers />} />
-           <Route path="content" element={<ManageContent />} />
-           <Route path="products" element={<ManageProducts />} />
-           <Route path="companies" element={<ManageCompanies />} />
-           <Route path="news" element={<ManageNews />} />
-           <Route path="profile" element={<AdminProfile />} />
-           <Route path="*" element={<div className="p-8">Page under construction</div>} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="messages" element={<ManageMessages />} />
+          <Route path="visitors" element={<VisitorStats />} />
+          <Route path="settings" element={<ManageSettings />} />
+          <Route path="users" element={<ManageUsers />} />
+          <Route path="content" element={<ManageContent />} />
+          <Route path="products" element={<ManageProducts />} />
+          <Route path="companies" element={<ManageCompanies />} />
+          <Route path="news" element={<ManageNews />} />
+          <Route path="profile" element={<AdminProfile />} />
+          <Route path="*" element={<div className="p-8">Page under construction</div>} />
         </Route>
       </Routes>
     </Router>

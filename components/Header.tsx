@@ -72,7 +72,7 @@ export const Header: React.FC = () => {
   const isActive = (path: string) => location.pathname === path;
   const isAboutActive = location.pathname.startsWith('/about');
   const isHome = location.pathname === '/';
-  const transparent = isHome && !scrolled;
+  const headerShadow = !isHome || scrolled ? 'shadow-soft' : '';
 
   const navLinks = [
     { name: 'Home', path: '/' },
@@ -86,7 +86,7 @@ export const Header: React.FC = () => {
     return value && value !== '#' && value.trim().length > 0;
   });
 
-  const linkColor = transparent ? 'text-white/85 hover:text-white' : 'text-ink-700 hover:text-brand-600';
+  const linkColor = 'text-ink-700 hover:text-brand-600';
 
   return (
     <>
@@ -138,15 +138,9 @@ export const Header: React.FC = () => {
       </div>
 
       {/* Main navigation */}
-      <header
-        className={`sticky top-0 z-50 w-full transition-all duration-500 ${
-          transparent
-            ? 'bg-gradient-to-b from-ink-950/70 to-transparent backdrop-blur-[2px]'
-            : 'glass shadow-soft'
-        }`}
-      >
-        <div className="container-x">
-          <div className={`flex items-center justify-between transition-all duration-500 ${scrolled ? 'h-[68px]' : 'h-[76px]'}`}>
+      <header className={`main-navigation-surface sticky top-0 z-50 w-full transition-all duration-500 ${headerShadow}`}>
+        <div className="container-x main-navigation-surface">
+          <div className={`main-navigation-surface flex items-center justify-between transition-all duration-500 ${scrolled ? 'h-[68px]' : 'h-[76px]'}`}>
             <Link to="/" className="group flex min-w-0 shrink items-center gap-3" aria-label="Expro Group home">
               {/*
                 No colour filter here. The previous `brightness-0 invert` forced every
@@ -172,7 +166,7 @@ export const Header: React.FC = () => {
                   key={link.path}
                   to={link.path}
                   className={`relative rounded-full px-4 py-2 text-[14.5px] font-semibold transition-colors ${linkColor} ${
-                    isActive(link.path) ? (transparent ? '!text-white' : '!text-brand-600') : ''
+                    isActive(link.path) ? '!text-brand-600' : ''
                   }`}
                 >
                   {link.name}
@@ -190,7 +184,7 @@ export const Header: React.FC = () => {
                   aria-expanded={aboutOpen}
                   aria-haspopup="true"
                   className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-[14.5px] font-semibold transition-colors ${linkColor} ${
-                    isAboutActive ? (transparent ? '!text-white' : '!text-brand-600') : ''
+                    isAboutActive ? '!text-brand-600' : ''
                   }`}
                 >
                   About Us
@@ -240,9 +234,7 @@ export const Header: React.FC = () => {
               onClick={() => setMobileOpen((v) => !v)}
               aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={mobileOpen}
-              className={`grid h-11 w-11 place-items-center rounded-xl border transition-colors lg:hidden ${
-                transparent ? 'border-white/20 text-white' : 'border-ink-900/10 text-ink-800'
-              }`}
+              className="grid h-11 w-11 place-items-center rounded-xl border border-ink-900/10 text-ink-800 transition-colors lg:hidden"
             >
               <i className={`fas ${mobileOpen ? 'fa-xmark' : 'fa-bars'}`} aria-hidden />
             </button>
@@ -250,7 +242,7 @@ export const Header: React.FC = () => {
         </div>
 
         {/* Reading progress */}
-        <div className="h-[2px] w-full bg-transparent" aria-hidden>
+        <div className="main-navigation-surface h-[2px] w-full" aria-hidden>
           <div
             className="h-full origin-left bg-gradient-to-r from-brand-400 to-brand-600 transition-transform duration-150"
             style={{ transform: `scaleX(${progress})` }}
@@ -270,7 +262,7 @@ export const Header: React.FC = () => {
           onClick={() => setMobileOpen(false)}
         />
         <aside
-          className={`absolute right-0 top-0 flex h-full w-[86%] max-w-sm flex-col bg-white shadow-2xl transition-transform duration-300 ease-out ${
+          className={`main-navigation-surface absolute right-0 top-0 flex h-full w-[86%] max-w-sm flex-col shadow-2xl transition-transform duration-300 ease-out ${
             mobileOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
         >

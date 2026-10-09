@@ -109,12 +109,31 @@ const stripComments = (src) =>
     .replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
 
 const headerCode = stripComments(header);
+const mainNav = headerCode.match(/<header\b[\s\S]*?<\/header>/)?.[0] || '';
+const mainNavOpenTag = mainNav.match(/<header\b[^>]*>/)?.[0] || '';
+const navSurfaceRule = css.match(/\.main-navigation-surface\s*\{([^}]*)\}/)?.[1] || '';
 const logoImg = headerCode.match(/<img[\s\S]{0,400}?logoUrl[\s\S]{0,600}?\/>/);
 
 const guards = [
   ['body has overflow-x: clip', /body\s*\{[^}]*overflow-x:\s*clip/s.test(css)],
   ['body has max-width: 100%', /body\s*\{[^}]*max-width:\s*100%/s.test(css)],
   ['box-sizing: border-box is global', /\*,\s*\*::before,\s*\*::after\s*\{\s*box-sizing:\s*border-box/s.test(css)],
+  [
+    'navbar, inner wrappers, and mobile drawer share the branded surface',
+    /className=\{`main-navigation-surface sticky/.test(mainNavOpenTag) &&
+      /className="container-x main-navigation-surface"/.test(mainNav) &&
+      /className=\{`main-navigation-surface flex/.test(mainNav) &&
+      /className="main-navigation-surface h-\[2px\] w-full"/.test(mainNav) &&
+      /className=\{`main-navigation-surface absolute right-0/.test(headerCode),
+  ],
+  [
+    'navbar surface is opaque #FDFEFF with no background image',
+    /background-color:\s*#FDFEFF/i.test(navSurfaceRule) && /background-image:\s*none/i.test(navSurfaceRule),
+  ],
+  [
+    'main navbar no longer uses the translucent hero gradient or glass blur',
+    !/(?:bg-gradient-to-b|from-ink-950\/70|backdrop-blur|bg-white\/78)/.test(mainNavOpenTag),
+  ],
   ['mobile drawer clips its off-screen panel', /fixed inset-0 z-\[60\] overflow-hidden/.test(headerCode)],
   ['header <img> located for inspection', Boolean(logoImg)],
   ['header logo has no brightness/invert filter', Boolean(logoImg) && !/brightness-0|invert/.test(logoImg[0])],
